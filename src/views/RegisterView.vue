@@ -2,26 +2,19 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { useAuthStore } from '@/stores/auth'
 import { authService } from '@/services/auth'
 
 const router = useRouter()
-const authStore = useAuthStore()
 
 const formRef = ref()
 const loading = ref(false)
 
-const mousePos = reactive({ x: 0, y: 0 })
-const isMouseInAnimationArea = ref(false)
-const isPasswordFocused = ref(false)
-const isConfirmPasswordFocused = ref(false)
-
 const formData = reactive({
   user_name: '',
+  email: '',
+  phone: '',
   user_password: '',
   confirm_password: '',
-  phone: '',
-  email: '',
 })
 
 const validateConfirmPassword = (rule: any, value: string, callback: any) => {
@@ -37,6 +30,14 @@ const rules = {
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 2, max: 20, message: '用户名长度在 2 到 20 个字符', trigger: 'blur' },
   ],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' },
+  ],
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' },
+  ],
   user_password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: 'blur' },
@@ -44,14 +45,6 @@ const rules = {
   confirm_password: [
     { required: true, message: '请再次输入密码', trigger: 'blur' },
     { validator: validateConfirmPassword, trigger: 'blur' },
-  ],
-  phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' },
-  ],
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' },
   ],
 }
 
@@ -62,9 +55,9 @@ const handleRegister = async () => {
 
     const result = await authService.register({
       user_name: formData.user_name,
-      user_password: formData.user_password,
-      phone: formData.phone,
       email: formData.email,
+      phone: formData.phone,
+      user_password: formData.user_password,
     })
 
     if (result.success) {
@@ -83,173 +76,41 @@ const handleRegister = async () => {
 const goToLogin = () => {
   router.push('/login')
 }
-
-const handleMouseMove = (e: MouseEvent) => {
-  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-  mousePos.x = e.clientX - rect.left
-  mousePos.y = e.clientY - rect.top
-}
-
-const handleMouseEnter = () => {
-  isMouseInAnimationArea.value = true
-}
-
-const handleMouseLeave = () => {
-  isMouseInAnimationArea.value = false
-  mousePos.x = 0
-  mousePos.y = 0
-}
-
-const isAnyPasswordFocused = () => {
-  return isPasswordFocused.value || isConfirmPasswordFocused.value
-}
 </script>
 
 <template>
   <div class="auth-page">
     <div class="auth-container">
-      <!-- 左侧动画区域 - 2/3 -->
-      <div 
-        class="auth-animation-section"
-        @mousemove="handleMouseMove"
-        @mouseenter="handleMouseEnter"
-        @mouseleave="handleMouseLeave"
-      >
-        <div class="animation-content">
-          <!-- 卡通小动物们 -->
-          <div class="animals">
-            <!-- 小猫 -->
-            <div class="animal cat" :style="{ transform: `translate(${mousePos.x * 0.02}px, ${mousePos.y * 0.02}px)` }">
-              <div class="animal-body">
-                <div class="helmet">👷</div>
-                <div class="face">
-                  <div class="eyes" :class="{ covered: isAnyPasswordFocused(), 'following': !isAnyPasswordFocused() && isMouseInAnimationArea }">
-                    <div class="eye left" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.03 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.03 : 0}px)` }">
-                      <div class="pupil"></div>
-                    </div>
-                    <div class="eye right" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.03 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.03 : 0}px)` }">
-                      <div class="pupil"></div>
-                    </div>
-                    <div v-if="isAnyPasswordFocused()" class="hands">
-                      <div class="hand left"></div>
-                      <div class="hand right"></div>
-                    </div>
-                  </div>
-                  <div class="nose"></div>
-                  <div class="mouth"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 小狗 -->
-            <div class="animal dog" :style="{ transform: `translate(${mousePos.x * 0.03}px, ${mousePos.y * 0.015}px)` }">
-              <div class="animal-body">
-                <div class="helmet">👷</div>
-                <div class="face">
-                  <div class="eyes" :class="{ covered: isAnyPasswordFocused(), 'following': !isAnyPasswordFocused() && isMouseInAnimationArea }">
-                    <div class="eye left" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.04 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.04 : 0}px)` }">
-                      <div class="pupil"></div>
-                    </div>
-                    <div class="eye right" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.04 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.04 : 0}px)` }">
-                      <div class="pupil"></div>
-                    </div>
-                    <div v-if="isAnyPasswordFocused()" class="hands">
-                      <div class="hand left"></div>
-                      <div class="hand right"></div>
-                    </div>
-                  </div>
-                  <div class="nose"></div>
-                  <div class="mouth"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 小熊 -->
-            <div class="animal bear" :style="{ transform: `translate(${mousePos.x * 0.025}px, ${mousePos.y * 0.025}px)` }">
-              <div class="animal-body">
-                <div class="helmet">👷</div>
-                <div class="face">
-                  <div class="eyes" :class="{ covered: isAnyPasswordFocused(), 'following': !isAnyPasswordFocused() && isMouseInAnimationArea }">
-                    <div class="eye left" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.035 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.035 : 0}px)` }">
-                      <div class="pupil"></div>
-                    </div>
-                    <div class="eye right" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.035 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.035 : 0}px)` }">
-                      <div class="pupil"></div>
-                    </div>
-                    <div v-if="isAnyPasswordFocused()" class="hands">
-                      <div class="hand left"></div>
-                      <div class="hand right"></div>
-                    </div>
-                  </div>
-                  <div class="nose"></div>
-                  <div class="mouth"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 小兔 -->
-            <div class="animal rabbit" :style="{ transform: `translate(${mousePos.x * 0.035}px, ${mousePos.y * 0.01}px)` }">
-              <div class="animal-body">
-                <div class="helmet">👷</div>
-                <div class="face">
-                  <div class="eyes" :class="{ covered: isAnyPasswordFocused(), 'following': !isAnyPasswordFocused() && isMouseInAnimationArea }">
-                    <div class="eye left" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.045 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.045 : 0}px)` }">
-                      <div class="pupil"></div>
-                    </div>
-                    <div class="eye right" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.045 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.045 : 0}px)` }">
-                      <div class="pupil"></div>
-                    </div>
-                    <div v-if="isAnyPasswordFocused()" class="hands">
-                      <div class="hand left"></div>
-                      <div class="hand right"></div>
-                    </div>
-                  </div>
-                  <div class="nose"></div>
-                  <div class="mouth"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 小猪 -->
-            <div class="animal pig" :style="{ transform: `translate(${mousePos.x * 0.015}px, ${mousePos.y * 0.03}px)` }">
-              <div class="animal-body">
-                <div class="helmet">👷</div>
-                <div class="face">
-                  <div class="eyes" :class="{ covered: isAnyPasswordFocused(), 'following': !isAnyPasswordFocused() && isMouseInAnimationArea }">
-                    <div class="eye left" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.025 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.025 : 0}px)` }">
-                      <div class="pupil"></div>
-                    </div>
-                    <div class="eye right" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.025 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.025 : 0}px)` }">
-                      <div class="pupil"></div>
-                    </div>
-                    <div v-if="isAnyPasswordFocused()" class="hands">
-                      <div class="hand left"></div>
-                      <div class="hand right"></div>
-                    </div>
-                  </div>
-                  <div class="nose"></div>
-                  <div class="mouth"></div>
-                </div>
-              </div>
-            </div>
+      <!-- 左侧几何角色动画区域 -->
+      <div class="auth-animation-section">
+        <div class="characters">
+          <!-- 紫色长方形角色 -->
+          <div class="character purple-rect">
+            <div class="safety-helmet">👷</div>
+            <div class="body"></div>
           </div>
-
-          <!-- 文字提示 -->
-          <div class="animation-tip">
-            <template v-if="isAnyPasswordFocused()">
-              🔒 正在输入密码，小动物们捂住了眼睛~
-            </template>
-            <template v-else-if="isMouseInAnimationArea">
-              👀 鼠标移动，小动物们的眼睛会跟随哦~
-            </template>
-            <template v-else>
-              🐾 安全专家智能问答系统
-            </template>
+          
+          <!-- 黑色长方形角色 -->
+          <div class="character black-rect">
+            <div class="safety-helmet">👷</div>
+            <div class="body"></div>
+          </div>
+          
+          <!-- 橙色半圆角色 -->
+          <div class="character orange-semi">
+            <div class="safety-helmet">👷</div>
+            <div class="body"></div>
+          </div>
+          
+          <!-- 黄色圆角矩形角色 -->
+          <div class="character yellow-rounded">
+            <div class="safety-helmet">👷</div>
+            <div class="body"></div>
           </div>
         </div>
       </div>
 
-      <!-- 右侧表单区域 - 1/3 -->
+      <!-- 右侧表单区域 -->
       <div class="auth-form-section">
         <div class="auth-form-wrapper">
           <h2 class="form-title">欢迎注册</h2>
@@ -261,72 +122,53 @@ const isAnyPasswordFocused = () => {
             class="auth-form"
             @submit.prevent="handleRegister"
           >
-            <el-form-item prop="user_name" label="用户名">
+            <el-form-item prop="user_name">
               <el-input
                 v-model="formData.user_name"
-                placeholder="请输入用户名 (2-20字符)"
+                placeholder="请输入用户名"
                 size="large"
-              >
-                <template #prefix>
-                  <span class="input-label">用户名</span>
-                </template>
-              </el-input>
+                prefix-icon="User"
+              />
             </el-form-item>
 
-            <el-form-item prop="user_password" label="密码">
+            <el-form-item prop="email">
+              <el-input
+                v-model="formData.email"
+                placeholder="请输入邮箱"
+                size="large"
+                prefix-icon="Message"
+              />
+            </el-form-item>
+
+            <el-form-item prop="phone">
+              <el-input
+                v-model="formData.phone"
+                placeholder="请输入手机号"
+                size="large"
+                prefix-icon="Phone"
+              />
+            </el-form-item>
+
+            <el-form-item prop="user_password">
               <el-input
                 v-model="formData.user_password"
                 type="password"
-                placeholder="请输入密码 (6-20字符)"
+                placeholder="请输入密码"
                 size="large"
+                prefix-icon="Lock"
                 show-password
-                @focus="isPasswordFocused = true"
-                @blur="isPasswordFocused = false"
-              >
-                <template #prefix>
-                  <span class="input-label">密码</span>
-                </template>
-              </el-input>
+              />
             </el-form-item>
 
-            <el-form-item prop="confirm_password" label="确认密码">
+            <el-form-item prop="confirm_password">
               <el-input
                 v-model="formData.confirm_password"
                 type="password"
                 placeholder="请再次输入密码"
                 size="large"
+                prefix-icon="Lock"
                 show-password
-                @focus="isConfirmPasswordFocused = true"
-                @blur="isConfirmPasswordFocused = false"
-              >
-                <template #prefix>
-                  <span class="input-label">确认密码</span>
-                </template>
-              </el-input>
-            </el-form-item>
-
-            <el-form-item prop="phone" label="手机号">
-              <el-input
-                v-model="formData.phone"
-                placeholder="请输入手机号"
-                size="large"
-              >
-                <template #prefix>
-                  <span class="input-label">手机号</span>
-                </template>
-              </el-input>
-            </el-form-item>
-
-            <el-form-item prop="email" label="邮箱">
-              <el-input
-                v-model="formData.email"
-                placeholder="请输入邮箱"
-                size="large"
-              >
-                <template #prefix>
-                  <span class="input-label">邮箱</span>
-                </template>
-              </el-input>
+              />
             </el-form-item>
 
             <el-form-item>
@@ -337,7 +179,7 @@ const isAnyPasswordFocused = () => {
                 class="submit-btn"
                 native-type="submit"
               >
-                注册
+                {{ loading ? '正在注册...' : '注册' }}
               </el-button>
             </el-form-item>
           </el-form>
@@ -355,7 +197,7 @@ const isAnyPasswordFocused = () => {
 <style scoped>
 .auth-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f5f5f5;
 }
 
 .auth-container {
@@ -363,184 +205,97 @@ const isAnyPasswordFocused = () => {
   min-height: 100vh;
 }
 
-/* 左侧动画区域 - 2/3 */
+/* 左侧动画区域 - 50% */
 .auth-animation-section {
-  flex: 2;
+  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  background: linear-gradient(135deg, #e0e0e0 0%, #b0b0b0 50%, #808080 100%);
   position: relative;
   overflow: hidden;
 }
 
-.animation-content {
-  text-align: center;
-  position: relative;
-  z-index: 1;
-}
-
-.animals {
+.characters {
   display: flex;
-  justify-content: center;
+  gap: 40px;
   align-items: flex-end;
-  gap: 20px;
-  flex-wrap: wrap;
-  padding: 20px;
+  padding: 40px;
 }
 
-.animal {
-  transition: transform 0.1s ease-out;
-}
-
-.animal-body {
-  width: 80px;
-  height: 100px;
-  background: linear-gradient(180deg, #FFE4B5 0%, #FFDAB9 100%);
-  border-radius: 40px 40px 30px 30px;
-  position: relative;
+/* 角色基础样式 */
+.character {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 10px;
+  animation: float 3s ease-in-out infinite;
 }
 
-.cat .animal-body {
-  background: linear-gradient(180deg, #B0C4DE 0%, #87CEEB 100%);
+.character:nth-child(1) { animation-delay: 0s; }
+.character:nth-child(2) { animation-delay: 0.5s; }
+.character:nth-child(3) { animation-delay: 1s; }
+.character:nth-child(4) { animation-delay: 1.5s; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
 }
 
-.dog .animal-body {
-  background: linear-gradient(180deg, #DEB887 0%, #D2691E 100%);
-}
-
-.bear .animal-body {
-  background: linear-gradient(180deg, #8B4513 0%, #A0522D 100%);
-}
-
-.rabbit .animal-body {
-  background: linear-gradient(180deg, #FFB6C1 0%, #FFC0CB 100%);
-}
-
-.pig .animal-body {
-  background: linear-gradient(180deg, #FFB6C1 0%, #FF69B4 100%);
-}
-
-.helmet {
-  font-size: 24px;
-  position: absolute;
-  top: -15px;
-}
-
-.face {
-  margin-top: 20px;
+.safety-helmet {
+  font-size: 40px;
+  z-index: 1;
   position: relative;
 }
 
-.eyes {
-  display: flex;
-  gap: 15px;
-  justify-content: center;
-  position: relative;
+.body {
+  margin-top: -10px;
 }
 
-.eye {
-  width: 18px;
-  height: 18px;
-  background: white;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: transform 0.05s ease-out;
+/* 紫色长方形 */
+.purple-rect .body {
+  width: 80px;
+  height: 120px;
+  background: linear-gradient(180deg, #9b59b6 0%, #8e44ad 100%);
+  border-radius: 10px;
 }
 
-.pupil {
-  width: 8px;
-  height: 8px;
-  background: #333;
-  border-radius: 50%;
+/* 黑色长方形 */
+.black-rect .body {
+  width: 70px;
+  height: 140px;
+  background: linear-gradient(180deg, #2c3e50 0%, #1a252f 100%);
+  border-radius: 8px;
 }
 
-.eyes.covered .eye {
-  background: transparent;
+/* 橙色半圆 */
+.orange-semi .body {
+  width: 90px;
+  height: 80px;
+  background: linear-gradient(180deg, #e67e22 0%, #d35400 100%);
+  border-radius: 90px 90px 20px 20px;
 }
 
-.eyes.covered .pupil {
-  display: none;
+/* 黄色圆角矩形 */
+.yellow-rounded .body {
+  width: 75px;
+  height: 100px;
+  background: linear-gradient(180deg, #f1c40f 0%, #f39c12 100%);
+  border-radius: 20px;
 }
 
-.hands {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  gap: 20px;
-  width: 60px;
-}
-
-.hand {
-  width: 15px;
-  height: 15px;
-  background: #FFE4B5;
-  border-radius: 50%;
-  animation: coverEyes 0.3s ease-out forwards;
-}
-
-.cat .hand { background: #B0C4DE; }
-.dog .hand { background: #DEB887; }
-.bear .hand { background: #8B4513; }
-.rabbit .hand { background: #FFB6C1; }
-.pig .hand { background: #FFB6C1; }
-
-@keyframes coverEyes {
-  from {
-    transform: translateY(-20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.nose {
-  width: 12px;
-  height: 10px;
-  background: #333;
-  border-radius: 50%;
-  margin: 5px auto;
-}
-
-.mouth {
-  width: 20px;
-  height: 8px;
-  border-bottom: 2px solid #333;
-  border-radius: 0 0 10px 10px;
-  margin: 0 auto;
-}
-
-.animation-tip {
-  margin-top: 40px;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 16px;
-  text-align: center;
-  min-height: 24px;
-}
-
-/* 右侧表单区域 - 1/3 */
+/* 右侧表单区域 - 50% */
 .auth-form-section {
   flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 2rem;
   background: white;
-  max-width: 400px;
 }
 
 .auth-form-wrapper {
   width: 100%;
+  max-width: 360px;
+  padding: 20px;
 }
 
 .form-title {
@@ -548,6 +303,7 @@ const isAnyPasswordFocused = () => {
   color: #333;
   text-align: center;
   margin-bottom: 2rem;
+  font-weight: 600;
 }
 
 .auth-form {
@@ -555,33 +311,11 @@ const isAnyPasswordFocused = () => {
 }
 
 .auth-form :deep(.el-form-item) {
-  margin-bottom: 1rem;
-}
-
-.auth-form :deep(.el-form-item__label) {
-  font-weight: 500;
-  color: #333;
-  padding: 0 0 6px 0;
+  margin-bottom: 1.25rem;
 }
 
 .auth-form :deep(.el-input__wrapper) {
-  padding: 6px 12px;
-  height: 36px;
-}
-
-.auth-form :deep(.el-input__inner) {
-  height: 24px;
-  line-height: 24px;
-}
-
-.auth-form :deep(.el-input__prefix) {
-  color: #666;
-}
-
-.input-label {
-  font-size: 14px;
-  color: #666;
-  min-width: 50px;
+  padding: 12px 16px;
 }
 
 .submit-btn {
@@ -599,14 +333,14 @@ const isAnyPasswordFocused = () => {
   margin-right: 0.5rem;
 }
 
-/* PC端 - 1:2 布局 */
+/* PC端 - 左右50%布局 */
 @media (min-width: 1024px) {
   .auth-form-section {
-    max-width: 33.333%;
+    max-width: 50%;
   }
 }
 
-/* 移动端 - 上下布局，各占一半 */
+/* 移动端 - 上下50%布局 */
 @media (max-width: 1023px) {
   .auth-container {
     flex-direction: column;
@@ -614,37 +348,29 @@ const isAnyPasswordFocused = () => {
 
   .auth-animation-section {
     flex: 1;
-    min-height: 50vh;
+    min-height: 45vh;
+    max-height: 55vh;
   }
 
   .auth-form-section {
     flex: 1;
-    min-height: 50vh;
+    min-height: 45vh;
+    max-height: 55vh;
     max-width: 100%;
   }
 
-  .animals {
-    gap: 10px;
+  .characters {
+    gap: 20px;
+    padding: 20px;
   }
 
-  .animal-body {
-    width: 60px;
-    height: 75px;
+  .safety-helmet {
+    font-size: 28px;
   }
 
-  .helmet {
-    font-size: 18px;
-    top: -10px;
-  }
-
-  .eye {
-    width: 14px;
-    height: 14px;
-  }
-
-  .pupil {
-    width: 6px;
-    height: 6px;
-  }
+  .purple-rect .body { width: 50px; height: 75px; }
+  .black-rect .body { width: 45px; height: 85px; }
+  .orange-semi .body { width: 55px; height: 50px; }
+  .yellow-rounded .body { width: 48px; height: 65px; }
 }
 </style>
