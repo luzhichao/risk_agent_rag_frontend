@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { chatService, type Session } from '@/services/chat'
-import { Plus, Folder, Edit } from '@element-plus/icons-vue'
+import { Plus, Folder, Edit, MoreFilled } from '@element-plus/icons-vue'
 
 interface ChatMessage {
   id: number
@@ -219,17 +219,12 @@ function editSessionTitle() {
 
     <!-- 右侧主聊天区域 -->
     <main class="chat-main">
-      <!-- 移动端菜单按钮 -->
-      <div class="mobile-menu-btn" @click="toggleSidebar">
-        <div class="hamburger"></div>
-      </div>
-
       <!-- 顶部标题栏 -->
       <div class="chat-header">
         <div class="header-left">
-          <div class="mobile-menu-btn" @click="toggleSidebar">
-            <div class="hamburger"></div>
-          </div>
+          <el-button class="edit-title-btn" @click="toggleSidebar">
+            <el-icon><MoreFilled /></el-icon>
+          </el-button>
         </div>
         <div class="header-center">
           <span class="chat-session-title">{{ currentSessionTitle || '新对话' }}</span>
@@ -509,17 +504,24 @@ function editSessionTitle() {
 
 .mobile-menu-btn {
   display: none;
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  z-index: 50;
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 6px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  padding: 0;
+}
+
+.mobile-menu-btn:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+.mobile-menu-btn .el-icon {
+  font-size: 16px;
+  color: #666;
 }
 
 .edit-title-btn {
@@ -719,62 +721,6 @@ function editSessionTitle() {
 }
 
 /* 移动端菜单按钮 */
-.mobile-menu-btn {
-  display: none;
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  z-index: 50;
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 10px;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 20px;
-  transition: background 0.2s;
-}
-
-.mobile-menu-btn::before {
-  content: '';
-  position: absolute;
-  inset: -6px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 14px;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.mobile-menu-btn:hover::before {
-  opacity: 1;
-}
-
-.mobile-menu-btn .hamburger {
-  width: 18px;
-  height: 2px;
-  background: #333;
-  position: relative;
-}
-
-.mobile-menu-btn .hamburger::before,
-.mobile-menu-btn .hamburger::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: #333;
-}
-
-.mobile-menu-btn .hamburger::before {
-  top: -6px;
-}
-
-.mobile-menu-btn .hamburger::after {
-  top: 6px;
-}
-
 /* 移动端遮罩层 */
 .sidebar-overlay {
   display: none;
