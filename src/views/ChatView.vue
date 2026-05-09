@@ -162,7 +162,7 @@ function editSessionTitle() {
     <div v-if="sidebarOpen" class="sidebar-overlay" @click="toggleSidebar"></div>
 
     <!-- 左侧边栏 -->
-    <aside class="sidebar" :class="{ open: sidebarOpen }">
+    <aside class="sidebar" :class="{ closed: !sidebarOpen }">
       <!-- Logo 区域 -->
       <div class="sidebar-header">
         <div class="logo">
@@ -313,6 +313,11 @@ function editSessionTitle() {
   flex-direction: column;
   color: white;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
+  transition: margin-left 0.3s;
+}
+
+.sidebar.closed {
+  margin-left: -280px;
 }
 
 .sidebar-header {
@@ -485,6 +490,7 @@ function editSessionTitle() {
   flex: 1;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
 }
 
 .header-center {
