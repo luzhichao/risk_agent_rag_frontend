@@ -22,6 +22,7 @@ const inputMessage = ref('')
 const loading = ref(false)
 const imageFiles = ref<File[]>([])
 const imageInputRef = ref<HTMLInputElement | null>(null)
+const sidebarOpen = ref(false)
 
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg']
 const MAX_IMAGES = 5
@@ -141,12 +142,19 @@ function logout() {
   authStore.logout()
   router.push('/login')
 }
+
+function toggleSidebar() {
+  sidebarOpen.value = !sidebarOpen.value
+}
 </script>
 
 <template>
   <div class="chat-page">
+    <!-- 移动端遮罩层 -->
+    <div v-if="sidebarOpen" class="sidebar-overlay" @click="toggleSidebar"></div>
+
     <!-- 左侧边栏 -->
-    <aside class="sidebar">
+    <aside class="sidebar" :class="{ open: sidebarOpen }">
       <!-- Logo 区域 -->
       <div class="sidebar-header">
         <div class="logo">
@@ -195,6 +203,11 @@ function logout() {
 
     <!-- 右侧主聊天区域 -->
     <main class="chat-main">
+      <!-- 移动端菜单按钮 -->
+      <div class="mobile-menu-btn" @click="toggleSidebar">
+        <div class="hamburger"></div>
+      </div>
+
       <!-- 消息列表 -->
       <div class="messages-container">
         <div v-if="messages.length === 0" class="empty-state">
@@ -542,6 +555,72 @@ function logout() {
   background: rgba(255, 255, 255, 1);
 }
 
+/* 移动端菜单按钮 */
+.mobile-menu-btn {
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 50;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 20px;
+  transition: background 0.2s;
+}
+
+.mobile-menu-btn::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.mobile-menu-btn:hover::before {
+  opacity: 1;
+}
+
+.mobile-menu-btn .hamburger {
+  width: 18px;
+  height: 2px;
+  background: #333;
+  position: relative;
+}
+
+.mobile-menu-btn .hamburger::before,
+.mobile-menu-btn .hamburger::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #333;
+}
+
+.mobile-menu-btn .hamburger::before {
+  top: -6px;
+}
+
+.mobile-menu-btn .hamburger::after {
+  top: 6px;
+}
+
+/* 移动端遮罩层 */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+}
+
 /* 移动端响应式 */
 @media (max-width: 768px) {
   .sidebar {
@@ -557,9 +636,30 @@ function logout() {
     left: 0;
   }
 
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  .sidebar-overlay {
+    display: block;
+  }
+
   .chat-main {
     width: 100%;
-    background: linear-gradient(145deg, #0f172a 0%, #1e3a8a 50%, #1e40af 100%);
+    background: #ffffff;
+  }
+
+  .image-preview-row {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .input-row {
+    width: 100%;
+  }
+
+  .message-input {
+    width: 100%;
   }
 }
 </style>
