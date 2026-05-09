@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
@@ -7,8 +7,14 @@ import { authService } from '@/services/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
+
 const formRef = ref()
 const loading = ref(false)
+
+const mousePos = reactive({ x: 0, y: 0 })
+const isMouseInAnimationArea = ref(false)
+const isPasswordFocused = ref(false)
+const isConfirmPasswordFocused = ref(false)
 
 const formData = reactive({
   user_name: '',
@@ -77,20 +83,173 @@ const handleRegister = async () => {
 const goToLogin = () => {
   router.push('/login')
 }
+
+const handleMouseMove = (e: MouseEvent) => {
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  mousePos.x = e.clientX - rect.left
+  mousePos.y = e.clientY - rect.top
+}
+
+const handleMouseEnter = () => {
+  isMouseInAnimationArea.value = true
+}
+
+const handleMouseLeave = () => {
+  isMouseInAnimationArea.value = false
+  mousePos.x = 0
+  mousePos.y = 0
+}
+
+const isAnyPasswordFocused = () => {
+  return isPasswordFocused.value || isConfirmPasswordFocused.value
+}
 </script>
 
 <template>
   <div class="auth-page">
     <div class="auth-container">
-      <!-- 左侧图片区域 -->
-      <div class="auth-image-section">
-        <div class="auth-image-content">
-          <h1>安全隐患识别</h1>
-          <p>智能问答系统</p>
+      <!-- 左侧动画区域 - 2/3 -->
+      <div 
+        class="auth-animation-section"
+        @mousemove="handleMouseMove"
+        @mouseenter="handleMouseEnter"
+        @mouseleave="handleMouseLeave"
+      >
+        <div class="animation-content">
+          <!-- 卡通小动物们 -->
+          <div class="animals">
+            <!-- 小猫 -->
+            <div class="animal cat" :style="{ transform: `translate(${mousePos.x * 0.02}px, ${mousePos.y * 0.02}px)` }">
+              <div class="animal-body">
+                <div class="helmet">👷</div>
+                <div class="face">
+                  <div class="eyes" :class="{ covered: isAnyPasswordFocused(), 'following': !isAnyPasswordFocused() && isMouseInAnimationArea }">
+                    <div class="eye left" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.03 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.03 : 0}px)` }">
+                      <div class="pupil"></div>
+                    </div>
+                    <div class="eye right" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.03 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.03 : 0}px)` }">
+                      <div class="pupil"></div>
+                    </div>
+                    <div v-if="isAnyPasswordFocused()" class="hands">
+                      <div class="hand left"></div>
+                      <div class="hand right"></div>
+                    </div>
+                  </div>
+                  <div class="nose"></div>
+                  <div class="mouth"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 小狗 -->
+            <div class="animal dog" :style="{ transform: `translate(${mousePos.x * 0.03}px, ${mousePos.y * 0.015}px)` }">
+              <div class="animal-body">
+                <div class="helmet">👷</div>
+                <div class="face">
+                  <div class="eyes" :class="{ covered: isAnyPasswordFocused(), 'following': !isAnyPasswordFocused() && isMouseInAnimationArea }">
+                    <div class="eye left" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.04 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.04 : 0}px)` }">
+                      <div class="pupil"></div>
+                    </div>
+                    <div class="eye right" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.04 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.04 : 0}px)` }">
+                      <div class="pupil"></div>
+                    </div>
+                    <div v-if="isAnyPasswordFocused()" class="hands">
+                      <div class="hand left"></div>
+                      <div class="hand right"></div>
+                    </div>
+                  </div>
+                  <div class="nose"></div>
+                  <div class="mouth"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 小熊 -->
+            <div class="animal bear" :style="{ transform: `translate(${mousePos.x * 0.025}px, ${mousePos.y * 0.025}px)` }">
+              <div class="animal-body">
+                <div class="helmet">👷</div>
+                <div class="face">
+                  <div class="eyes" :class="{ covered: isAnyPasswordFocused(), 'following': !isAnyPasswordFocused() && isMouseInAnimationArea }">
+                    <div class="eye left" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.035 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.035 : 0}px)` }">
+                      <div class="pupil"></div>
+                    </div>
+                    <div class="eye right" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.035 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.035 : 0}px)` }">
+                      <div class="pupil"></div>
+                    </div>
+                    <div v-if="isAnyPasswordFocused()" class="hands">
+                      <div class="hand left"></div>
+                      <div class="hand right"></div>
+                    </div>
+                  </div>
+                  <div class="nose"></div>
+                  <div class="mouth"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 小兔 -->
+            <div class="animal rabbit" :style="{ transform: `translate(${mousePos.x * 0.035}px, ${mousePos.y * 0.01}px)` }">
+              <div class="animal-body">
+                <div class="helmet">👷</div>
+                <div class="face">
+                  <div class="eyes" :class="{ covered: isAnyPasswordFocused(), 'following': !isAnyPasswordFocused() && isMouseInAnimationArea }">
+                    <div class="eye left" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.045 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.045 : 0}px)` }">
+                      <div class="pupil"></div>
+                    </div>
+                    <div class="eye right" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.045 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.045 : 0}px)` }">
+                      <div class="pupil"></div>
+                    </div>
+                    <div v-if="isAnyPasswordFocused()" class="hands">
+                      <div class="hand left"></div>
+                      <div class="hand right"></div>
+                    </div>
+                  </div>
+                  <div class="nose"></div>
+                  <div class="mouth"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 小猪 -->
+            <div class="animal pig" :style="{ transform: `translate(${mousePos.x * 0.015}px, ${mousePos.y * 0.03}px)` }">
+              <div class="animal-body">
+                <div class="helmet">👷</div>
+                <div class="face">
+                  <div class="eyes" :class="{ covered: isAnyPasswordFocused(), 'following': !isAnyPasswordFocused() && isMouseInAnimationArea }">
+                    <div class="eye left" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.025 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.025 : 0}px)` }">
+                      <div class="pupil"></div>
+                    </div>
+                    <div class="eye right" :style="{ transform: `translate(${isMouseInAnimationArea ? mousePos.x * 0.025 : 0}px, ${isMouseInAnimationArea ? mousePos.y * 0.025 : 0}px)` }">
+                      <div class="pupil"></div>
+                    </div>
+                    <div v-if="isAnyPasswordFocused()" class="hands">
+                      <div class="hand left"></div>
+                      <div class="hand right"></div>
+                    </div>
+                  </div>
+                  <div class="nose"></div>
+                  <div class="mouth"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 文字提示 -->
+          <div class="animation-tip">
+            <template v-if="isAnyPasswordFocused()">
+              🔒 正在输入密码，小动物们捂住了眼睛~
+            </template>
+            <template v-else-if="isMouseInAnimationArea">
+              👀 鼠标移动，小动物们的眼睛会跟随哦~
+            </template>
+            <template v-else>
+              🐾 安全专家智能问答系统
+            </template>
+          </div>
         </div>
       </div>
 
-      <!-- 右侧表单区域 -->
+      <!-- 右侧表单区域 - 1/3 -->
       <div class="auth-form-section">
         <div class="auth-form-wrapper">
           <h2 class="form-title">欢迎注册</h2>
@@ -102,53 +261,72 @@ const goToLogin = () => {
             class="auth-form"
             @submit.prevent="handleRegister"
           >
-            <el-form-item prop="user_name">
+            <el-form-item prop="user_name" label="用户名">
               <el-input
                 v-model="formData.user_name"
                 placeholder="请输入用户名 (2-20字符)"
                 size="large"
-                prefix-icon="User"
-              />
+              >
+                <template #prefix>
+                  <span class="input-label">用户名</span>
+                </template>
+              </el-input>
             </el-form-item>
 
-            <el-form-item prop="user_password">
+            <el-form-item prop="user_password" label="密码">
               <el-input
                 v-model="formData.user_password"
                 type="password"
                 placeholder="请输入密码 (6-20字符)"
                 size="large"
-                prefix-icon="Lock"
                 show-password
-              />
+                @focus="isPasswordFocused = true"
+                @blur="isPasswordFocused = false"
+              >
+                <template #prefix>
+                  <span class="input-label">密码</span>
+                </template>
+              </el-input>
             </el-form-item>
 
-            <el-form-item prop="confirm_password">
+            <el-form-item prop="confirm_password" label="确认密码">
               <el-input
                 v-model="formData.confirm_password"
                 type="password"
                 placeholder="请再次输入密码"
                 size="large"
-                prefix-icon="Lock"
                 show-password
-              />
+                @focus="isConfirmPasswordFocused = true"
+                @blur="isConfirmPasswordFocused = false"
+              >
+                <template #prefix>
+                  <span class="input-label">确认密码</span>
+                </template>
+              </el-input>
             </el-form-item>
 
-            <el-form-item prop="phone">
+            <el-form-item prop="phone" label="手机号">
               <el-input
                 v-model="formData.phone"
                 placeholder="请输入手机号"
                 size="large"
-                prefix-icon="Phone"
-              />
+              >
+                <template #prefix>
+                  <span class="input-label">手机号</span>
+                </template>
+              </el-input>
             </el-form-item>
 
-            <el-form-item prop="email">
+            <el-form-item prop="email" label="邮箱">
               <el-input
                 v-model="formData.email"
                 placeholder="请输入邮箱"
                 size="large"
-                prefix-icon="Message"
-              />
+              >
+                <template #prefix>
+                  <span class="input-label">邮箱</span>
+                </template>
+              </el-input>
             </el-form-item>
 
             <el-form-item>
@@ -185,29 +363,172 @@ const goToLogin = () => {
   min-height: 100vh;
 }
 
-.auth-image-section {
-  flex: 1;
-  display: none;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+/* 左侧动画区域 - 2/3 */
+.auth-animation-section {
+  flex: 2;
+  display: flex;
   justify-content: center;
   align-items: center;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  position: relative;
+  overflow: hidden;
 }
 
-.auth-image-content {
+.animation-content {
   text-align: center;
-  color: white;
+  position: relative;
+  z-index: 1;
 }
 
-.auth-image-content h1 {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+.animals {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 20px;
 }
 
-.auth-image-content p {
-  font-size: 1.5rem;
-  opacity: 0.9;
+.animal {
+  transition: transform 0.1s ease-out;
 }
 
+.animal-body {
+  width: 80px;
+  height: 100px;
+  background: linear-gradient(180deg, #FFE4B5 0%, #FFDAB9 100%);
+  border-radius: 40px 40px 30px 30px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 10px;
+}
+
+.cat .animal-body {
+  background: linear-gradient(180deg, #B0C4DE 0%, #87CEEB 100%);
+}
+
+.dog .animal-body {
+  background: linear-gradient(180deg, #DEB887 0%, #D2691E 100%);
+}
+
+.bear .animal-body {
+  background: linear-gradient(180deg, #8B4513 0%, #A0522D 100%);
+}
+
+.rabbit .animal-body {
+  background: linear-gradient(180deg, #FFB6C1 0%, #FFC0CB 100%);
+}
+
+.pig .animal-body {
+  background: linear-gradient(180deg, #FFB6C1 0%, #FF69B4 100%);
+}
+
+.helmet {
+  font-size: 24px;
+  position: absolute;
+  top: -15px;
+}
+
+.face {
+  margin-top: 20px;
+  position: relative;
+}
+
+.eyes {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  position: relative;
+}
+
+.eye {
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.05s ease-out;
+}
+
+.pupil {
+  width: 8px;
+  height: 8px;
+  background: #333;
+  border-radius: 50%;
+}
+
+.eyes.covered .eye {
+  background: transparent;
+}
+
+.eyes.covered .pupil {
+  display: none;
+}
+
+.hands {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 20px;
+  width: 60px;
+}
+
+.hand {
+  width: 15px;
+  height: 15px;
+  background: #FFE4B5;
+  border-radius: 50%;
+  animation: coverEyes 0.3s ease-out forwards;
+}
+
+.cat .hand { background: #B0C4DE; }
+.dog .hand { background: #DEB887; }
+.bear .hand { background: #8B4513; }
+.rabbit .hand { background: #FFB6C1; }
+.pig .hand { background: #FFB6C1; }
+
+@keyframes coverEyes {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.nose {
+  width: 12px;
+  height: 10px;
+  background: #333;
+  border-radius: 50%;
+  margin: 5px auto;
+}
+
+.mouth {
+  width: 20px;
+  height: 8px;
+  border-bottom: 2px solid #333;
+  border-radius: 0 0 10px 10px;
+  margin: 0 auto;
+}
+
+.animation-tip {
+  margin-top: 40px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  text-align: center;
+  min-height: 24px;
+}
+
+/* 右侧表单区域 - 1/3 */
 .auth-form-section {
   flex: 1;
   display: flex;
@@ -215,11 +536,11 @@ const goToLogin = () => {
   align-items: center;
   padding: 2rem;
   background: white;
+  max-width: 400px;
 }
 
 .auth-form-wrapper {
   width: 100%;
-  max-width: 400px;
 }
 
 .form-title {
@@ -234,15 +555,39 @@ const goToLogin = () => {
 }
 
 .auth-form :deep(.el-form-item) {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.auth-form :deep(.el-form-item__label) {
+  font-weight: 500;
+  color: #333;
+  padding: 0 0 6px 0;
 }
 
 .auth-form :deep(.el-input__wrapper) {
-  padding: 12px 16px;
+  padding: 6px 12px;
+  height: 36px;
+}
+
+.auth-form :deep(.el-input__inner) {
+  height: 24px;
+  line-height: 24px;
+}
+
+.auth-form :deep(.el-input__prefix) {
+  color: #666;
+}
+
+.input-label {
+  font-size: 14px;
+  color: #666;
+  min-width: 50px;
 }
 
 .submit-btn {
   width: 100%;
+  height: 44px;
+  font-size: 16px;
 }
 
 .form-footer {
@@ -254,14 +599,52 @@ const goToLogin = () => {
   margin-right: 0.5rem;
 }
 
-/* PC端 */
+/* PC端 - 1:2 布局 */
 @media (min-width: 1024px) {
-  .auth-image-section {
-    display: flex;
+  .auth-form-section {
+    max-width: 33.333%;
+  }
+}
+
+/* 移动端 - 上下布局，各占一半 */
+@media (max-width: 1023px) {
+  .auth-container {
+    flex-direction: column;
+  }
+
+  .auth-animation-section {
+    flex: 1;
+    min-height: 50vh;
   }
 
   .auth-form-section {
-    max-width: 50%;
+    flex: 1;
+    min-height: 50vh;
+    max-width: 100%;
+  }
+
+  .animals {
+    gap: 10px;
+  }
+
+  .animal-body {
+    width: 60px;
+    height: 75px;
+  }
+
+  .helmet {
+    font-size: 18px;
+    top: -10px;
+  }
+
+  .eye {
+    width: 14px;
+    height: 14px;
+  }
+
+  .pupil {
+    width: 6px;
+    height: 6px;
   }
 }
 </style>
