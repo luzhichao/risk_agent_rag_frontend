@@ -217,9 +217,17 @@ function logout() {
 
       <!-- 输入区域 -->
       <div class="input-container">
-        <el-button class="upload-btn" @click="imageInputRef?.click()">
-          <el-icon><Plus /></el-icon>
-        </el-button>
+        <!-- 上传按钮 + 图片缩略图 -->
+        <div class="image-preview-row">
+          <el-button class="upload-btn" @click="imageInputRef?.click()">
+            <el-icon><Plus /></el-icon>
+          </el-button>
+          <div v-for="(file, index) in imageFiles" :key="index" class="image-preview-item">
+            <img :src="getImageUrl(file)" :alt="file.name" />
+            <div class="image-remove" @click="removeImage(index)">×</div>
+          </div>
+        </div>
+
         <input
           ref="imageInputRef"
           type="file"
@@ -228,15 +236,21 @@ function logout() {
           style="display: none"
           @change="handleImageUpload"
         />
-        <el-input
-          v-model="inputMessage"
-          type="textarea"
-          placeholder="请输入您的问题..."
-          :rows="3"
-          :disabled="loading"
-          class="message-input"
-          @keydown="handleKeyDown"
-        />
+
+        <!-- 输入框 -->
+        <div class="input-row">
+          <el-input
+            v-model="inputMessage"
+            type="textarea"
+            placeholder="请输入您的问题..."
+            :rows="3"
+            :disabled="loading"
+            :maxlength="200"
+            show-word-limit
+            class="message-input"
+            @keydown="handleKeyDown"
+          />
+        </div>
       </div>
     </main>
   </div>
@@ -446,16 +460,61 @@ function logout() {
 /* 输入区域 */
 .input-container {
   padding: 16px 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 12px;
-  align-items: flex-end;
-  justify-content: center;
   background: transparent;
 }
 
-.message-input {
+.image-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: 800px;
+}
+
+.image-preview-item {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.image-preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.input-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  width: 800px;
+}
+
+.message-input {
+  flex: 1;
   height: 120px;
 }
 
@@ -476,6 +535,7 @@ function logout() {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .upload-btn:hover {
