@@ -1,5 +1,3 @@
-import { ref } from 'vue'
-
 const API_BASE_URL = 'http://127.0.0.1:8000'
 
 export interface LoginRequest {
@@ -16,11 +14,15 @@ export interface RegisterRequest {
 
 export interface AuthResponse {
   success: boolean
-  data?: {
-    token?: string
-    user_name?: string
-  }
+  data?: unknown
   error?: string
+  msg?: string
+}
+
+interface ApiResult {
+  code: number
+  msg: string
+  data?: unknown
 }
 
 export const authService = {
@@ -34,18 +36,19 @@ export const authService = {
         body: JSON.stringify(data),
       })
 
-      const result = await response.json()
+      const result: ApiResult = await response.json()
 
-      if (!response.ok) {
+      if (result.code !== 200) {
         return {
           success: false,
-          error: result.detail || '登录失败',
+          error: result.msg || '登录失败',
         }
       }
 
       return {
         success: true,
-        data: result,
+        data: result.data as { token?: string; user_name?: string },
+        msg: result.msg,
       }
     } catch (error) {
       return {
@@ -65,18 +68,19 @@ export const authService = {
         body: JSON.stringify(data),
       })
 
-      const result = await response.json()
+      const result: ApiResult = await response.json()
 
-      if (!response.ok) {
+      if (result.code !== 200) {
         return {
           success: false,
-          error: result.detail || '注册失败',
+          error: result.msg || '注册失败',
         }
       }
 
       return {
         success: true,
-        data: result,
+        data: result.data as { token?: string; user_name?: string },
+        msg: result.msg,
       }
     } catch (error) {
       return {

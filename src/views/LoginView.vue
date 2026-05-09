@@ -36,7 +36,9 @@ const handleLogin = async () => {
     const result = await authService.login(formData)
 
     if (result.success && result.data) {
-      authStore.setToken(result.data.token || '', result.data.user_name || formData.user_name)
+      // API返回的data是JWT token字符串
+      const token = result.data as string
+      authStore.setToken(token, formData.user_name)
       ElMessage.success('登录成功')
       const redirect = route.query.redirect as string
       router.push(redirect || '/')
