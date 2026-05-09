@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
@@ -17,16 +17,21 @@ const authStore = useAuthStore()
 
 const conversations = ref<Session[]>([])
 const currentSessionId = ref<string | null>(null)
-const currentSessionTitle = computed(() => {
+const isEditingTitle = ref(false)
+const editingTitle = ref('')
+const titleInputRef = ref<HTMLInputElement | null>(null)
+const currentSessionTitle = ref('')
+
+function updateCurrentSessionTitle() {
   const session = conversations.value.find(s => s.session_id === currentSessionId.value)
-  return session?.session_name || ''
-})
+  currentSessionTitle.value = session?.session_name || ''
+}
 const messages = ref<ChatMessage[]>([])
 const inputMessage = ref('')
 const loading = ref(false)
 const imageFiles = ref<File[]>([])
 const imageInputRef = ref<HTMLInputElement | null>(null)
-const sidebarOpen = ref(false)
+const sidebarOpen = ref(localStorage.getItem('sidebarOpen') !== 'false')
 
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg']
 const MAX_IMAGES = 5
@@ -51,12 +56,14 @@ async function createNewSession() {
       currentSessionId.value = data.session_id
       messages.value = []
       await loadSessionList()
+      updateCurrentSessionTitle()
     }
   }
 }
 
 async function selectConversation(sessionId: string) {
   currentSessionId.value = sessionId
+  updateCurrentSessionTitle()
 
   const result = await chatService.getSessionHistory(sessionId)
   if (result.success && result.data) {
@@ -149,10 +156,37 @@ function logout() {
 
 function toggleSidebar() {
   sidebarOpen.value = !sidebarOpen.value
+  localStorage.setItem('sidebarOpen', String(sidebarOpen.value))
 }
 
 function editSessionTitle() {
-  // TODO: 实现编辑会话标题
+  if (!currentSessionId.value) return
+  editingTitle.value = currentSessionTitle.value || '新对话'
+  isEditingTitle.value = true
+  nextTick(() => {
+    titleInputRef.value?.focus()
+  })
+}
+
+function saveSessionTitle() {
+  const title = editingTitle.value.trim()
+  if (!title) {
+    isEditingTitle.value = false
+    return
+  }
+  const index = conversations.value.findIndex(s => s.session_id === currentSessionId.value)
+  if (index !== -1) {
+    const session = conversations.value[index]
+    if (session) {
+      conversations.value[index] = { session_id: session.session_id, session_name: title, user_id: session.user_id }
+      currentSessionTitle.value = title
+    }
+  }
+  isEditingTitle.value = false
+}
+
+function cancelEditTitle() {
+  isEditingTitle.value = false
 }
 </script>
 
@@ -227,11 +261,22 @@ function editSessionTitle() {
           </el-button>
         </div>
         <div class="header-center">
-          <span class="chat-session-title">{{ currentSessionTitle || '新对话' }}</span>
+          <div v-if="isEditingTitle" class="title-edit">
+            <input
+              ref="titleInputRef"
+              v-model="editingTitle"
+              class="title-input"
+              @keydown.enter="saveSessionTitle"
+              @keydown.esc="cancelEditTitle"
+              @blur="saveSessionTitle"
+            />
+          </div>
+          <span v-else class="chat-session-title" @click="currentSessionId && editSessionTitle()">{{ currentSessionTitle || '新对话' }}</span>
           <span class="chat-subtitle">安全专家智能对话</span>
         </div>
         <div class="header-right">
-          <el-button class="edit-title-btn" @click="editSessionTitle">
+          <!-- TODO: 新建会话时隐藏编辑按钮，选择历史会话后显示 -->
+          <el-button v-if="currentSessionId" class="edit-title-btn" @click="editSessionTitle">
             <el-icon><Edit /></el-icon>
           </el-button>
         </div>
@@ -569,11 +614,28 @@ function editSessionTitle() {
   font-size: 14px;
   font-weight: 600;
   color: #333;
+  cursor: pointer;
 }
 
 .chat-subtitle {
   font-size: 11px;
   color: #999;
+}
+
+.title-edit {
+  display: flex;
+  align-items: center;
+}
+
+.title-input {
+  width: 120px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  border: none;
+  background: transparent;
+  outline: none;
 }
 
 .messages-container {
