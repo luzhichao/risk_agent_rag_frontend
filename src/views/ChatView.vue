@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { chatService, type Session } from '@/services/chat'
-import { Plus, Folder } from '@element-plus/icons-vue'
+import { Plus, Folder, Edit } from '@element-plus/icons-vue'
 
 interface ChatMessage {
   id: number
@@ -17,6 +17,10 @@ const authStore = useAuthStore()
 
 const conversations = ref<Session[]>([])
 const currentSessionId = ref<string | null>(null)
+const currentSessionTitle = computed(() => {
+  const session = conversations.value.find(s => s.session_id === currentSessionId.value)
+  return session?.session_name || ''
+})
 const messages = ref<ChatMessage[]>([])
 const inputMessage = ref('')
 const loading = ref(false)
@@ -146,6 +150,10 @@ function logout() {
 function toggleSidebar() {
   sidebarOpen.value = !sidebarOpen.value
 }
+
+function editSessionTitle() {
+  // TODO: 实现编辑会话标题
+}
 </script>
 
 <template>
@@ -214,6 +222,24 @@ function toggleSidebar() {
       <!-- 移动端菜单按钮 -->
       <div class="mobile-menu-btn" @click="toggleSidebar">
         <div class="hamburger"></div>
+      </div>
+
+      <!-- 顶部标题栏 -->
+      <div class="chat-header">
+        <div class="header-left">
+          <div class="mobile-menu-btn" @click="toggleSidebar">
+            <div class="hamburger"></div>
+          </div>
+        </div>
+        <div class="header-center">
+          <span class="chat-session-title">{{ currentSessionTitle || '新对话' }}</span>
+          <span class="chat-subtitle">安全专家智能对话</span>
+        </div>
+        <div class="header-right">
+          <el-button class="edit-title-btn" @click="editSessionTitle">
+            <el-icon><Edit /></el-icon>
+          </el-button>
+        </div>
       </div>
 
       <!-- 消息列表 -->
@@ -450,6 +476,96 @@ function toggleSidebar() {
   display: flex;
   flex-direction: column;
   background: #ffffff;
+}
+
+.chat-header {
+  height: 50px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.header-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.header-center {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.header-right {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mobile-menu-btn {
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 50;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.edit-title-btn {
+  width: 32px;
+  height: 32px;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.edit-title-btn:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+.edit-title-btn .el-icon {
+  font-size: 16px;
+  color: #666;
+}
+
+.chat-header-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+
+.chat-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-session-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.chat-subtitle {
+  font-size: 11px;
+  color: #999;
 }
 
 .messages-container {
@@ -694,6 +810,23 @@ function toggleSidebar() {
   .chat-main {
     width: 100%;
     background: #ffffff;
+  }
+
+  .chat-header {
+    padding: 0 16px;
+  }
+
+  .header-left {
+    flex: 1;
+  }
+
+  .header-center {
+    flex: 1;
+    padding: 0 12px;
+  }
+
+  .header-right {
+    flex: 1;
   }
 
   .image-preview-row {
