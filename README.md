@@ -1,42 +1,70 @@
-# my-project
+# Risk Agent Frontend
 
-This template should help get you started developing with Vue 3 in Vite.
+基于 Vue 3 + TypeScript + Element Plus 的安全隐患识别智能问答系统前端。
 
-## Recommended IDE Setup
+## 功能设计
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+### 认证模块
 
-## Recommended Browser Setup
+| 功能 | 说明 |
+|------|------|
+| 用户注册 | 用户名 + 密码 + 确认密码 + 手机号 + 邮箱 |
+| 用户登录 | 用户名 + 密码 |
+| Token存储 | localStorage 持久存储 |
+| 表单验证 | 前端格式校验 + 后端错误友好展示 |
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+### 页面设计
 
-## Type Support for `.vue` Imports in TS
+| 页面 | 路由 | 布局 |
+|------|------|------|
+| 登录页 | /login | PC左右分栏，移动端堆叠 |
+| 注册页 | /register | 与登录页一致 |
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+### 技术架构
 
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
+```
+src/
+├── services/
+│   └── auth.ts          # 登录注册API封装
+├── stores/
+│   └── auth.ts          # 用户状态管理(Pinia)
+├── views/
+│   ├── LoginView.vue    # 登录页
+│   └── RegisterView.vue # 注册页
+└── router/
+    └── index.ts         # 路由配置
 ```
 
-### Compile and Hot-Reload for Development
+### 项目结构
 
-```sh
-npm run dev
+```
+src/
+├── assets/          → 静态CSS资源
+├── components/      → Vue UI组件
+│   └── icons/       → 图标组件
+├── composables/     → Vue组合式函数
+├── router/          → Vue Router配置
+├── stores/          → Pinia状态管理
+│   └── auth.ts      # 认证状态管理
+├── services/        → API服务层
+│   └── auth.ts      # 认证API封装
+└── views/           → 页面级组件
+    ├── LoginView.vue
+    └── RegisterView.vue
 ```
 
-### Type-Check, Compile and Minify for Production
+## 开发命令
 
 ```sh
-npm run build
+npm run dev      # 开发服务器
+npm run build    # 生产构建
+npm run preview  # 预览构建
+npm run type-check # TypeScript检查
 ```
+
+## 后端接口
+
+- 基础URL: http://127.0.0.1:8000
+- 注册: POST /api/v1/system/register
+- 登录: POST /api/v1/system/login
+- 问答: POST /api/v1/chat/ask
