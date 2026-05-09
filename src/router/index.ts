@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
-import HomeView from '../views/HomeView.vue'
+import ChatView from '../views/ChatView.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -10,7 +10,12 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: HomeView,
+      redirect: '/chat',
+    },
+    {
+      path: '/chat',
+      name: 'chat',
+      component: ChatView,
     },
     {
       path: '/login',
@@ -34,12 +39,14 @@ router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
   
   // 需要登录的页面
-  const requiresAuth = ['/', '/about']
-  
+  const requiresAuth = ['/chat', '/about']
+
   if (requiresAuth.includes(to.path) && !authStore.isLoggedIn) {
     next({ path: '/login', query: { redirect: to.fullPath } })
   } else if ((to.path === '/login' || to.path === '/register') && authStore.isLoggedIn) {
-    next('/')
+    next('/chat')
+  } else if (to.path === '/' && authStore.isLoggedIn) {
+    next('/chat')
   } else {
     next()
   }

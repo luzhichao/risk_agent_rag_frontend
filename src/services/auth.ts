@@ -1,3 +1,5 @@
+import { request } from './request'
+
 const API_BASE_URL = 'http://127.0.0.1:8000'
 
 export interface LoginRequest {
@@ -20,7 +22,8 @@ export interface AuthResponse {
 }
 
 interface ApiResult {
-  code: number
+  code?: number
+  status_code?: number
   msg: string
   data?: unknown
 }
@@ -37,8 +40,9 @@ export const authService = {
       })
 
       const result: ApiResult = await response.json()
+      const statusCode = result.code ?? result.status_code
 
-      if (result.code !== 200) {
+      if (statusCode !== 200) {
         return {
           success: false,
           error: result.msg || '登录失败',
@@ -47,7 +51,7 @@ export const authService = {
 
       return {
         success: true,
-        data: result.data as { token?: string; user_name?: string },
+        data: result.data,
         msg: result.msg,
       }
     } catch (error) {
@@ -56,6 +60,12 @@ export const authService = {
         error: '网络连接失败，请检查服务器',
       }
     }
+  },
+
+  async getUserInfo() {
+    return request<{ user_id: number; user_name: string; email: string; phone: string; created_at: string }>(
+      '/api/v1/system/get_user_info'
+    )
   },
 
   async register(data: RegisterRequest): Promise<AuthResponse> {
@@ -69,8 +79,9 @@ export const authService = {
       })
 
       const result: ApiResult = await response.json()
+      const statusCode = result.code ?? result.status_code
 
-      if (result.code !== 200) {
+      if (statusCode !== 200) {
         return {
           success: false,
           error: result.msg || '注册失败',
@@ -79,7 +90,7 @@ export const authService = {
 
       return {
         success: true,
-        data: result.data as { token?: string; user_name?: string },
+        data: result.data,
         msg: result.msg,
       }
     } catch (error) {

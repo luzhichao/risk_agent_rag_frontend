@@ -2,8 +2,10 @@
 import { ref, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { View, Hide } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { authService } from '@/services/auth'
+import AnimatedCharacters from '@/components/AnimatedCharacters/index.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -11,6 +13,9 @@ const authStore = useAuthStore()
 
 const formRef = ref()
 const loading = ref(false)
+const isTyping = ref(false)
+const showPassword = ref(false)
+const passwordValue = ref('')
 
 const formData = reactive({
   user_name: '',
@@ -34,13 +39,39 @@ const handleLogin = async () => {
     loading.value = true
 
     const result = await authService.login(formData)
+    console.log('login result:', result)
 
-    if (result.success && result.data) {
-      const token = result.data as string
+    if (result.success && result.data !== undefined) {
+      let token = ''
+      if (typeof result.data === 'string') {
+        token = result.data
+      } else if (typeof result.data === 'object' && result.data !== null) {
+        token = (result.data as { token?: string })?.token || ''
+      }
+
+      console.log('extracted token:', token ? 'valid' : 'empty')
+      console.log('token length:', token.length)
+
+      if (!token) {
+        ElMessage.error('登录失败：未获取到 token')
+        loading.value = false
+        return
+      }
+
       authStore.setToken(token, formData.user_name)
+      console.log('token saved, isLoggedIn:', authStore.isLoggedIn)
+
+      // 获取用户信息
+      const userInfoResult = await authService.getUserInfo()
+      console.log('getUserInfo result:', userInfoResult)
+      if (userInfoResult.success && userInfoResult.data) {
+        authStore.setUserInfo(userInfoResult.data as any)
+      }
+
       ElMessage.success('登录成功')
       const redirect = route.query.redirect as string
-      router.push(redirect || '/')
+      console.log('redirecting to:', redirect || '/chat')
+      router.push(redirect || '/chat')
     } else {
       ElMessage.error(result.error || '登录失败')
     }
@@ -54,45 +85,49 @@ const handleLogin = async () => {
 const goToRegister = () => {
   router.push('/register')
 }
+
+const togglePasswordVisibility = () => {
+  showPassword.value = !showPassword.value
+}
 </script>
 
 <template>
   <div class="auth-page">
     <div class="auth-container">
-      <!-- 左侧几何角色动画区域 -->
+      <!-- 左侧动画区域 - 50% -->
       <div class="auth-animation-section">
-        <div class="characters">
-          <!-- 紫色长方形角色 -->
-          <div class="character purple-rect">
-            <div class="safety-helmet">👷</div>
-            <div class="body"></div>
+        <!-- 背景渐变 -->
+        <div class="bg-gradient"></div>
+
+        <!-- 装饰网格 -->
+        <div class="decor-grid"></div>
+
+        <!-- 品牌标识 -->
+        <div class="left-top">
+          <div class="brand-mark">
+            <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
+              <path d="M7 14L12 9L17 14L12 19L7 14Z" fill="white" fill-opacity="0.9" />
+              <path d="M13 14L18 9L21 12V16L18 19L13 14Z" fill="white" fill-opacity="0.5" />
+            </svg>
           </div>
-          
-          <!-- 黑色长方形角色 -->
-          <div class="character black-rect">
-            <div class="safety-helmet">👷</div>
-            <div class="body"></div>
-          </div>
-          
-          <!-- 橙色半圆角色 -->
-          <div class="character orange-semi">
-            <div class="safety-helmet">👷</div>
-            <div class="body"></div>
-          </div>
-          
-          <!-- 黄色圆角矩形角色 -->
-          <div class="character yellow-rounded">
-            <div class="safety-helmet">👷</div>
-            <div class="body"></div>
-          </div>
+          <span class="brand-name">安全专家智能问答系统</span>
+        </div>
+
+        <!-- 动画角色区域 -->
+        <div class="characters-area">
+          <AnimatedCharacters
+            :is-typing="isTyping"
+            :show-password="showPassword"
+            :password-length="passwordValue.length"
+          />
         </div>
       </div>
 
-      <!-- 右侧表单区域 -->
+      <!-- 右侧表单区域 - 50% -->
       <div class="auth-form-section">
         <div class="auth-form-wrapper">
           <h2 class="form-title">欢迎登录</h2>
-          
+
           <el-form
             ref="formRef"
             :model="formData"
@@ -100,24 +135,33 @@ const goToRegister = () => {
             class="auth-form"
             @submit.prevent="handleLogin"
           >
+            <div class="field-label">用户名</div>
             <el-form-item prop="user_name">
               <el-input
                 v-model="formData.user_name"
                 placeholder="请输入用户名"
                 size="large"
-                prefix-icon="User"
+                @focus="isTyping = true"
+                @blur="isTyping = false"
               />
             </el-form-item>
 
+            <div class="field-label">密码</div>
             <el-form-item prop="user_password">
               <el-input
                 v-model="formData.user_password"
-                type="password"
+                :type="showPassword ? 'text' : 'password'"
                 placeholder="请输入密码"
                 size="large"
-                prefix-icon="Lock"
-                show-password
-              />
+                @input="passwordValue = formData.user_password"
+              >
+                <template #suffix>
+                  <el-icon class="eye-toggle" @click="togglePasswordVisibility">
+                    <View v-if="showPassword" />
+                    <Hide v-else />
+                  </el-icon>
+                </template>
+              </el-input>
             </el-form-item>
 
             <el-form-item>
@@ -146,7 +190,7 @@ const goToRegister = () => {
 <style scoped>
 .auth-page {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: #0f0f23;
 }
 
 .auth-container {
@@ -156,100 +200,120 @@ const goToRegister = () => {
 
 /* 左侧动画区域 - 50% */
 .auth-animation-section {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: linear-gradient(135deg, #e0e0e0 0%, #b0b0b0 50%, #808080 100%);
+  flex: 0 0 50%;
   position: relative;
-  overflow: hidden;
-}
-
-.characters {
-  display: flex;
-  gap: 40px;
-  align-items: flex-end;
-  padding: 40px;
-}
-
-/* 角色基础样式 */
-.character {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  animation: float 3s ease-in-out infinite;
+  justify-content: space-between;
+  padding: 32px 48px;
+  background: linear-gradient(145deg, #0f172a 0%, #1e3a8a 50%, #1e40af 100%);
+  overflow: hidden;
+  min-height: 100vh;
 }
 
-.character:nth-child(1) { animation-delay: 0s; }
-.character:nth-child(2) { animation-delay: 0.5s; }
-.character:nth-child(3) { animation-delay: 1s; }
-.character:nth-child(4) { animation-delay: 1.5s; }
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+.bg-gradient {
+  position: absolute;
+  inset: 0;
 }
 
-.safety-helmet {
-  font-size: 40px;
+.decor-grid {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
   z-index: 1;
+}
+
+/* 品牌标识 */
+.left-top {
   position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
 }
 
-.body {
-  margin-top: -10px;
-}
-
-/* 紫色长方形 */
-.purple-rect .body {
-  width: 80px;
-  height: 120px;
-  background: linear-gradient(180deg, #9b59b6 0%, #8e44ad 100%);
+.brand-mark {
+  width: 40px;
+  height: 40px;
   border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
 }
 
-/* 黑色长方形 */
-.black-rect .body {
-  width: 70px;
-  height: 140px;
-  background: linear-gradient(180deg, #2c3e50 0%, #1a252f 100%);
-  border-radius: 8px;
+.brand-name {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
-/* 橙色半圆 */
-.orange-semi .body {
-  width: 90px;
-  height: 80px;
-  background: linear-gradient(180deg, #e67e22 0%, #d35400 100%);
-  border-radius: 90px 90px 20px 20px;
+/* 动画角色区域 */
+.characters-area {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  flex: 1;
+  height: 400px;
 }
 
-/* 黄色圆角矩形 */
-.yellow-rounded .body {
-  width: 75px;
-  height: 100px;
-  background: linear-gradient(180deg, #f1c40f 0%, #f39c12 100%);
-  border-radius: 20px;
+/* 装饰模糊 */
+.decor-blur-1 {
+  position: absolute;
+  top: 15%;
+  right: 10%;
+  width: 300px;
+  height: 300px;
+  background: rgba(59, 130, 246, 0.25);
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.decor-blur-2 {
+  position: absolute;
+  bottom: 10%;
+  left: 5%;
+  width: 400px;
+  height: 400px;
+  background: rgba(30, 64, 175, 0.3);
+  border-radius: 50%;
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* 右侧表单区域 - 50% */
 .auth-form-section {
-  flex: 1;
+  flex: 0 0 50%;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: white;
+  background: #ffffff;
+  min-height: 100vh;
 }
 
 .auth-form-wrapper {
   width: 100%;
-  max-width: 360px;
-  padding: 20px;
+  max-width: 400px;
+  padding: 40px;
 }
 
 .form-title {
   font-size: 1.75rem;
-  color: #333;
+  color: #1a1a2e;
   text-align: center;
   margin-bottom: 2rem;
   font-weight: 600;
@@ -259,18 +323,45 @@ const goToRegister = () => {
   margin-bottom: 1.5rem;
 }
 
+.field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 6px;
+  letter-spacing: 0.2px;
+}
+
 .auth-form :deep(.el-form-item) {
   margin-bottom: 1.25rem;
 }
 
 .auth-form :deep(.el-input__wrapper) {
-  padding: 12px 16px;
+  padding: 10px 14px;
+}
+
+.eye-toggle {
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.eye-toggle:hover {
+  color: #374151;
 }
 
 .submit-btn {
   width: 100%;
-  height: 44px;
+  height: 48px;
   font-size: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+}
+
+.submit-btn:hover {
+  background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
 }
 
 .form-footer {
@@ -282,44 +373,34 @@ const goToRegister = () => {
   margin-right: 0.5rem;
 }
 
-/* PC端 - 左右50%布局 */
-@media (min-width: 1024px) {
-  .auth-form-section {
-    max-width: 50%;
-  }
-}
-
-/* 移动端 - 上下50%布局 */
+/* 移动端 - 全屏表单 */
 @media (max-width: 1023px) {
-  .auth-container {
-    flex-direction: column;
-  }
-
   .auth-animation-section {
-    flex: 1;
-    min-height: 45vh;
-    max-height: 55vh;
+    display: none;
   }
 
   .auth-form-section {
     flex: 1;
-    min-height: 45vh;
-    max-height: 55vh;
     max-width: 100%;
-  }
-
-  .characters {
-    gap: 20px;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     padding: 20px;
   }
 
-  .safety-helmet {
-    font-size: 28px;
+  .auth-form-wrapper {
+    background: white;
+    border-radius: 16px;
+    padding: 30px 24px;
+    max-width: 100%;
+    width: 100%;
   }
 
-  .purple-rect .body { width: 50px; height: 75px; }
-  .black-rect .body { width: 45px; height: 85px; }
-  .orange-semi .body { width: 55px; height: 50px; }
-  .yellow-rounded .body { width: 48px; height: 65px; }
+  .form-title {
+    color: #1a1a2e;
+  }
+
+  .submit-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
 }
 </style>
