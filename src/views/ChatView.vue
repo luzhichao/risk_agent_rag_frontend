@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { chatService, type Session } from '@/services/chat'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Folder } from '@element-plus/icons-vue'
 
 interface ChatMessage {
   id: number
@@ -166,6 +166,14 @@ function toggleSidebar() {
         </div>
       </div>
 
+      <!-- 知识库管理 -->
+      <div class="menu-item">
+        <el-button class="menu-btn">
+          <el-icon class="menu-icon"><Folder /></el-icon>
+          <span>知识库管理</span>
+        </el-button>
+      </div>
+
       <!-- 新建对话按钮 -->
       <div class="new-chat">
         <el-button type="primary" class="new-chat-btn" @click="createNewSession">
@@ -302,19 +310,58 @@ function toggleSidebar() {
   font-weight: 600;
 }
 
+.menu-item {
+  padding: 0 20px;
+  margin-top: 8px;
+}
+
+.menu-btn {
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 20px;
+  transition: background 0.2s;
+}
+
+.menu-icon {
+  font-size: 16px;
+  margin-right: 10px;
+}
+
+.menu-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .new-chat {
   padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .new-chat-btn {
   width: 100%;
-  height: 40px;
+  height: 44px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  padding: 0;
+  transition: background 0.2s;
+}
+
+.new-chat-btn:hover {
+  background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
 }
 
 .plus-icon {
