@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { chatService, type Session } from '@/services/chat'
+import { Plus } from '@element-plus/icons-vue'
 
 interface ChatMessage {
   id: number
@@ -19,6 +20,11 @@ const currentSessionId = ref<string | null>(null)
 const messages = ref<ChatMessage[]>([])
 const inputMessage = ref('')
 const loading = ref(false)
+const imageFiles = ref<File[]>([])
+const imageInputRef = ref<HTMLInputElement | null>(null)
+
+const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg']
+const MAX_IMAGES = 5
 
 onMounted(async () => {
   await loadSessionList()
@@ -52,6 +58,36 @@ async function selectConversation(sessionId: string) {
     const data = result.data as { messages?: ChatMessage[] }
     messages.value = data.messages || []
   }
+}
+
+function handleImageUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (!input.files?.length) return
+
+  const files = Array.from(input.files)
+  const invalidFiles = files.filter(f => !ALLOWED_TYPES.includes(f.type))
+  if (invalidFiles.length > 0) {
+    ElMessage.error('仅支持 png、jpg、jpeg 格式的图片')
+    input.value = ''
+    return
+  }
+
+  if (imageFiles.value.length + files.length > MAX_IMAGES) {
+    ElMessage.error(`最多上传 ${MAX_IMAGES} 张图片`)
+    input.value = ''
+    return
+  }
+
+  imageFiles.value = [...imageFiles.value, ...files]
+  input.value = ''
+}
+
+function removeImage(index: number) {
+  imageFiles.value = imageFiles.value.filter((_, i) => i !== index)
+}
+
+function getImageUrl(file: File): string {
+  return URL.createObjectURL(file)
 }
 
 async function sendMessage() {
@@ -91,6 +127,13 @@ async function sendMessage() {
     ElMessage.error('网络错误')
   } finally {
     loading.value = false
+  }
+}
+
+function handleKeyDown(event: KeyboardEvent) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault()
+    sendMessage()
   }
 }
 
@@ -174,6 +217,17 @@ function logout() {
 
       <!-- 输入区域 -->
       <div class="input-container">
+        <el-button class="upload-btn" @click="imageInputRef?.click()">
+          <el-icon><Plus /></el-icon>
+        </el-button>
+        <input
+          ref="imageInputRef"
+          type="file"
+          accept=".png,.jpg,.jpeg"
+          multiple
+          style="display: none"
+          @change="handleImageUpload"
+        />
         <el-input
           v-model="inputMessage"
           type="textarea"
@@ -181,11 +235,8 @@ function logout() {
           :rows="3"
           :disabled="loading"
           class="message-input"
-          @keydown.enter.ctrl="sendMessage"
+          @keydown="handleKeyDown"
         />
-        <el-button type="primary" class="send-btn" :loading="loading" @click="sendMessage">
-          发送
-        </el-button>
       </div>
     </main>
   </div>
@@ -201,7 +252,7 @@ function logout() {
 /* 左侧边栏 */
 .sidebar {
   width: 280px;
-  background: #1a1a2e;
+  background: linear-gradient(145deg, #0f172a 0%, #1e3a8a 50%, #1e40af 100%);
   display: flex;
   flex-direction: column;
   color: white;
@@ -399,11 +450,13 @@ function logout() {
   display: flex;
   gap: 12px;
   align-items: flex-end;
-  background: #1a1a2e;
+  justify-content: center;
+  background: transparent;
 }
 
 .message-input {
-  flex: 1;
+  width: 800px;
+  height: 120px;
 }
 
 .message-input :deep(.el-textarea__inner) {
@@ -411,13 +464,22 @@ function logout() {
   resize: none;
   background: rgba(255, 255, 255, 0.95);
   color: #1a1a2e;
+  height: 120px;
 }
 
-.send-btn {
+.upload-btn {
+  width: 42px;
   height: 42px;
-  padding: 0 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: rgba(255, 255, 255, 0.9);
   border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-btn:hover {
+  background: rgba(255, 255, 255, 1);
 }
 
 /* 移动端响应式 */
