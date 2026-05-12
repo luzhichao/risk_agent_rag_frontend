@@ -759,7 +759,7 @@ const riskLabels: Record<string, string> = {
 /* 消息列表 */
 .messages-container {
   flex: 1;
-  padding: 24px;
+  padding: 24px 24px 24px 44px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
