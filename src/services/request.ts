@@ -10,13 +10,14 @@ interface ApiResult {
 interface RequestOptions extends RequestInit {
   requireToken?: boolean
   params?: Record<string, string>
+  contentType?: string
 }
 
 export async function request<T = unknown>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<{ success: boolean; data?: T; error?: string; msg?: string }> {
-  const { requireToken = true, params, ...fetchOptions } = options
+  const { requireToken = true, params, contentType = 'application/json', ...fetchOptions } = options
 
   let url = `${API_BASE_URL}${endpoint}`
   if (params) {
@@ -25,7 +26,7 @@ export async function request<T = unknown>(
   }
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    'Content-Type': contentType,
     ...(fetchOptions.headers as Record<string, string> || {}),
   }
 

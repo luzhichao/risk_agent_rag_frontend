@@ -1,78 +1,72 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
-import { chatService, type Session } from '@/services/chat'
-import { Plus, Folder, Edit, MoreFilled } from '@element-plus/icons-vue'
-
-interface ChatMessage {
-  id: number
-  role: 'user' | 'assistant'
-  content: string
-}
+import { useSessionStore } from '@/stores/session'
+import { uploadService } from '@/services/upload'
+import { chatService } from '@/services/chat'
+import { Plus, Folder, Edit, MoreFilled, Upload, CaretBottom, CaretRight, Promotion } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const sessionStore = useSessionStore()
 
-const conversations = ref<Session[]>([])
-const currentSessionId = ref<string | null>(null)
+const conversations = computed(() => sessionStore.sessions)
+const currentSessionId = computed(() => sessionStore.currentSessionId)
+const messages = computed(() => sessionStore.messages)
+
 const isEditingTitle = ref(false)
 const editingTitle = ref('')
 const titleInputRef = ref<HTMLInputElement | null>(null)
 const currentSessionTitle = ref('')
-
-function updateCurrentSessionTitle() {
-  const session = conversations.value.find(s => s.session_id === currentSessionId.value)
-  currentSessionTitle.value = session?.session_name || ''
-}
-const messages = ref<ChatMessage[]>([])
 const inputMessage = ref('')
 const loading = ref(false)
-const imageFiles = ref<File[]>([])
+const localImageFiles = ref<File[]>([])
+const uploadedImageUrls = ref<string[]>([])
 const imageInputRef = ref<HTMLInputElement | null>(null)
+const isUploading = ref(false)
 const sidebarOpen = ref(localStorage.getItem('sidebarOpen') !== 'false')
+const messagesContainerRef = ref<HTMLElement | null>(null)
+const expandedThinks = ref<Set<string>>(new Set())
 
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg']
 const MAX_IMAGES = 5
 
 onMounted(async () => {
-  await loadSessionList()
+  sessionStore.loadSessionsFromCache()
+  await sessionStore.loadSessionList()
+  
+  // 如果有当前会话ID，恢复会话
+  if (currentSessionId.value) {
+    updateCurrentSessionTitle()
+    await sessionStore.loadSessionHistory(currentSessionId.value)
+  }
 })
 
+function updateCurrentSessionTitle() {
+  const session = conversations.value.find(s => s.session_id === currentSessionId.value)
+  currentSessionTitle.value = session?.session_name || ''
+}
+
 async function loadSessionList() {
-  const result = await chatService.getSessionList()
-  if (result.success && result.data) {
-    const data = result.data as { sessions?: { session_id: string; session_name: string; user_id: string }[] }
-    conversations.value = data.sessions || []
-  }
+  await sessionStore.loadSessionList()
 }
 
 async function createNewSession() {
-  const result = await chatService.createSession()
-  if (result.success && result.data) {
-    const data = result.data as { session_id?: string }
-    if (data.session_id) {
-      currentSessionId.value = data.session_id
-      messages.value = []
-      await loadSessionList()
-      updateCurrentSessionTitle()
-    }
-  }
+  // 只是重置状态，不立即创建会话
+  // 实际创建会话延迟到发送消息时
+  sessionStore.setCurrentSessionId(null)
+  sessionStore.messages = []
+  currentSessionTitle.value = ''
 }
 
 async function selectConversation(sessionId: string) {
-  currentSessionId.value = sessionId
+  await sessionStore.selectSession(sessionId)
   updateCurrentSessionTitle()
-
-  const result = await chatService.getSessionHistory(sessionId)
-  if (result.success && result.data) {
-    const data = result.data as { messages?: ChatMessage[] }
-    messages.value = data.messages || []
-  }
 }
 
-function handleImageUpload(event: Event) {
+async function handleImageUpload(event: Event) {
   const input = event.target as HTMLInputElement
   if (!input.files?.length) return
 
@@ -84,61 +78,117 @@ function handleImageUpload(event: Event) {
     return
   }
 
-  if (imageFiles.value.length + files.length > MAX_IMAGES) {
+  if (uploadedImageUrls.value.length + files.length > MAX_IMAGES) {
     ElMessage.error(`最多上传 ${MAX_IMAGES} 张图片`)
     input.value = ''
     return
   }
 
-  imageFiles.value = [...imageFiles.value, ...files]
+  // 立即上传图片
+  isUploading.value = true
+  try {
+    const uploadResult = await uploadService.uploadRiskImages(files)
+    if (uploadResult.success && uploadResult.data) {
+      // 用服务器返回的URL显示预览
+      uploadedImageUrls.value = [...uploadedImageUrls.value, ...uploadResult.data]
+    } else {
+      ElMessage.error(uploadResult.error || '图片上传失败')
+    }
+  } finally {
+    isUploading.value = false
+  }
   input.value = ''
 }
 
 function removeImage(index: number) {
-  imageFiles.value = imageFiles.value.filter((_, i) => i !== index)
-}
-
-function getImageUrl(file: File): string {
-  return URL.createObjectURL(file)
+  uploadedImageUrls.value = uploadedImageUrls.value.filter((_, i) => i !== index)
+  localImageFiles.value = localImageFiles.value.filter((_, i) => i !== index)
 }
 
 async function sendMessage() {
-  if (!inputMessage.value.trim() || loading.value) return
+  if (!inputMessage.value.trim() && uploadedImageUrls.value.length === 0) return
+  if (loading.value) return
 
   loading.value = true
   const question = inputMessage.value.trim()
 
-  messages.value.push({
-    id: Date.now(),
-    role: 'user',
-    content: question,
-  })
+  // 图片已在handleImageUpload时上传，uploadedImageUrls包含服务器返回的URLs
+  const uploadedUrls = [...uploadedImageUrls.value]
 
+  // 确保有会话ID - 如果是新会话，截取问题前20字作为标题
+  let sessionId = currentSessionId.value
+  if (!sessionId) {
+    const sessionTitle = question.length > 20 ? question.substring(0, 20) + '...' : question
+    sessionId = await sessionStore.createSession(sessionTitle)
+    if (sessionId) {
+      updateCurrentSessionTitle()
+    } else {
+      ElMessage.error('创建会话失败')
+      loading.value = false
+      return
+    }
+  }
+
+  // 添加用户消息
+  sessionStore.addUserMessage(question, uploadedUrls)
+  uploadedImageUrls.value = []
+  localImageFiles.value = []
   inputMessage.value = ''
 
+  await nextTick()
+  scrollToBottom()
+
   try {
-    const result = await chatService.ask(question, currentSessionId.value || undefined)
+    // 创建AI消息占位
+    sessionStore.addAssistantMessage()
+    
+    // 流式获取响应
+    let thinkContent = ''
+    let outputContent = ''
 
-    if (result.success && result.data) {
-      const data = result.data as { answer?: string; session_id?: string }
-      if (data.session_id) {
-        currentSessionId.value = data.session_id
+    for await (const msg of chatService.askStream(question, sessionId, uploadedUrls)) {
+      if (msg.type === 'think') {
+        thinkContent += msg.content
+        sessionStore.updateLastAssistantMessage(thinkContent, undefined)
+      } else if (msg.type === 'output') {
+        outputContent += msg.content
       }
-
-      messages.value.push({
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: data.answer || '',
-      })
-
-      await loadSessionList()
-    } else {
-      ElMessage.error(result.error || '发送失败')
+      await nextTick()
+      scrollToBottom()
     }
+
+    // 流结束后，解析output并更新
+    if (outputContent) {
+      try {
+        const outputObj = JSON.parse(outputContent)
+        // 检查是否是错误响应格式
+        if (outputObj && outputObj.status_code !== undefined && outputObj.status_code !== 200) {
+          sessionStore.updateLastAssistantMessage(thinkContent, undefined)
+          ElMessage.error(outputObj.msg || '系统异常')
+        } else if (outputObj && (outputObj.name || outputObj.risk_type || outputObj.description)) {
+          // 有效的风险结果，保留think内容
+          sessionStore.updateLastAssistantMessage(thinkContent, outputObj)
+        } else {
+          // JSON解析成功但不是风险结果格式，设置content为空
+          sessionStore.updateLastAssistantMessage(thinkContent, undefined)
+        }
+      } catch {
+        // JSON解析失败，可能是普通文本回复，不显示think，直接显示文本
+        sessionStore.updateLastAssistantMessage('', { name: outputContent } as any)
+      }
+    }
+    
+    await loadSessionList()
   } catch {
     ElMessage.error('网络错误')
   } finally {
     loading.value = false
+  }
+}
+
+function scrollToBottom() {
+  if (messagesContainerRef.value) {
+    messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight
   }
 }
 
@@ -168,36 +218,72 @@ function editSessionTitle() {
   })
 }
 
-function saveSessionTitle() {
+async function saveSessionTitle() {
   const title = editingTitle.value.trim()
   if (!title) {
     isEditingTitle.value = false
     return
   }
-  const index = conversations.value.findIndex(s => s.session_id === currentSessionId.value)
-  if (index !== -1) {
-    const session = conversations.value[index]
-    if (session) {
-      conversations.value[index] = { session_id: session.session_id, session_name: title, user_id: session.user_id }
-      currentSessionTitle.value = title
-    }
+  
+  if (currentSessionId.value) {
+    await sessionStore.updateSessionTitle(currentSessionId.value, title)
+    currentSessionTitle.value = title
   }
+  
   isEditingTitle.value = false
+  await loadSessionList()
 }
 
 function cancelEditTitle() {
   isEditingTitle.value = false
 }
+
+function toggleThink(messageId: string) {
+  if (expandedThinks.value.has(messageId)) {
+    expandedThinks.value.delete(messageId)
+  } else {
+    expandedThinks.value.add(messageId)
+  }
+}
+
+function parseOutput(output: any): Record<string, string>[] {
+  if (!output) return []
+  
+  // 如果output是字符串，尝试解析
+  if (typeof output === 'string') {
+    try {
+      output = JSON.parse(output)
+    } catch {
+      return []
+    }
+  }
+  
+  // 返回单条记录
+  if (output.name) {
+    return [output]
+  }
+  
+  return []
+}
+
+const riskLabels: Record<string, string> = {
+  name: '风险名称',
+  description: '风险描述',
+  risk_type: '风险类型',
+  risk_level: '风险等级',
+  risk_status: '风险状态',
+  according: '依据',
+  solution: '解决方案',
+  sources: '来源'
+}
 </script>
 
 <template>
   <div class="chat-page">
-    <!-- 移动端遮罩层 -->
     <div v-if="sidebarOpen" class="sidebar-overlay" @click="toggleSidebar"></div>
 
     <!-- 左侧边栏 -->
     <aside class="sidebar" :class="{ closed: !sidebarOpen }">
-      <!-- Logo 区域 -->
       <div class="sidebar-header">
         <div class="logo">
           <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
@@ -208,7 +294,6 @@ function cancelEditTitle() {
         </div>
       </div>
 
-      <!-- 知识库管理 -->
       <div class="menu-item">
         <el-button class="menu-btn">
           <el-icon class="menu-icon"><Folder /></el-icon>
@@ -216,7 +301,6 @@ function cancelEditTitle() {
         </el-button>
       </div>
 
-      <!-- 新建对话按钮 -->
       <div class="new-chat">
         <el-button type="primary" class="new-chat-btn" @click="createNewSession">
           <span class="plus-icon">+</span>
@@ -224,7 +308,6 @@ function cancelEditTitle() {
         </el-button>
       </div>
 
-      <!-- 对话列表 -->
       <div class="conversation-list">
         <div
           v-for="conv in conversations"
@@ -237,7 +320,6 @@ function cancelEditTitle() {
         </div>
       </div>
 
-      <!-- 用户信息区域 -->
       <div class="sidebar-footer">
         <div class="user-info">
           <div class="user-avatar">
@@ -245,15 +327,12 @@ function cancelEditTitle() {
           </div>
           <span class="username">{{ authStore.userInfo?.user_name || authStore.userName || '用户' }}</span>
         </div>
-        <el-button class="logout-btn" @click="logout">
-          退出
-        </el-button>
+        <el-button class="logout-btn" @click="logout">退出</el-button>
       </div>
     </aside>
 
     <!-- 右侧主聊天区域 -->
     <main class="chat-main">
-      <!-- 顶部标题栏 -->
       <div class="chat-header">
         <div class="header-left">
           <el-button class="edit-title-btn" @click="toggleSidebar">
@@ -271,11 +350,12 @@ function cancelEditTitle() {
               @blur="saveSessionTitle"
             />
           </div>
-          <span v-else class="chat-session-title" @click="currentSessionId && editSessionTitle()">{{ currentSessionTitle || '新对话' }}</span>
+          <span v-else class="chat-session-title" @click="currentSessionId && editSessionTitle()">
+            {{ currentSessionTitle || '新对话' }}
+          </span>
           <span class="chat-subtitle">安全专家智能对话</span>
         </div>
         <div class="header-right">
-          <!-- TODO: 新建会话时隐藏编辑按钮，选择历史会话后显示 -->
           <el-button v-if="currentSessionId" class="edit-title-btn" @click="editSessionTitle">
             <el-icon><Edit /></el-icon>
           </el-button>
@@ -283,34 +363,86 @@ function cancelEditTitle() {
       </div>
 
       <!-- 消息列表 -->
-      <div class="messages-container">
+      <div ref="messagesContainerRef" class="messages-container">
         <div v-if="messages.length === 0" class="empty-state">
-          欢迎使用安全专家智能问答系统
+          <div class="empty-icon">🔒</div>
+          <div class="empty-text">欢迎使用安全专家智能问答系统</div>
+          <div class="empty-hint">上传图片或输入问题开始分析</div>
         </div>
-        <div
-          v-for="msg in messages"
-          :key="msg.id"
-          :class="['message', msg.role]"
-        >
+
+        <div v-for="msg in messages" :key="msg.id" :class="['message', msg.role]">
           <div class="message-avatar">
             <span v-if="msg.role === 'user'">U</span>
             <span v-else>AI</span>
           </div>
-          <div class="message-content">
-            {{ msg.content }}
+          
+          <div class="message-bubble">
+            <!-- 用户图片 -->
+            <div v-if="msg.images && msg.images.length > 0" class="message-images">
+              <el-image
+                v-for="(img, idx) in msg.images"
+                :key="idx"
+                :src="img"
+                class="message-image"
+                :preview-src-list="msg.images"
+                fit="cover"
+              />
+            </div>
+            
+            <!-- 用户消息内容 -->
+            <div v-if="msg.role === 'user'" class="message-content">{{ msg.content }}</div>
+            
+            <!-- AI消息内容 -->
+            <div v-else class="ai-content">
+              <!-- Think部分 -->
+              <div v-if="msg.think" class="think-section">
+                <div class="think-header" @click="toggleThink(msg.id)">
+                  <el-icon v-if="expandedThinks.has(msg.id)"><el-icon><CaretBottom/></el-icon></el-icon>
+                  <el-icon v-else><el-icon><CaretRight/></el-icon></el-icon>
+                  <span>思考过程</span>
+                </div>
+                <div v-show="expandedThinks.has(msg.id)" class="think-content">
+                  {{ msg.think }}
+                </div>
+              </div>
+              
+              <!-- Output部分 - 风险结果表单 -->
+              <div v-if="msg.output" class="output-section">
+                <div v-if="msg.output.name && msg.output.risk_type" class="output-form">
+                  <div class="output-header">风险分析结果</div>
+                  <div v-for="(value, key) in msg.output" :key="key" class="form-row">
+                    <div class="form-label">{{ riskLabels[key] || key }}</div>
+                    <div class="form-value">
+                      <template v-if="key === 'sources' && Array.isArray(value)">
+                        <span v-for="(s, i) in value" :key="i" class="source-tag">{{ s }}</span>
+                      </template>
+                      <template v-else>{{ value }}</template>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="output-text">
+                  {{ msg.output.name || msg.content }}
+                </div>
+              </div>
+              
+              <!-- 空内容时的加载状态 -->
+              <div v-if="!msg.think && !msg.output && msg.role === 'assistant'" class="loading-dots">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- 输入区域 -->
       <div class="input-container">
-        <!-- 上传按钮 + 图片缩略图 -->
         <div class="image-preview-row">
-          <el-button class="upload-btn" @click="imageInputRef?.click()">
-            <el-icon><Plus /></el-icon>
+          <el-button class="upload-btn" :disabled="isUploading" @click="imageInputRef?.click()">
+            <el-icon><Upload /></el-icon>
+            <span v-if="isUploading">上传中...</span>
           </el-button>
-          <div v-for="(file, index) in imageFiles" :key="index" class="image-preview-item">
-            <img :src="getImageUrl(file)" :alt="file.name" />
+          <div v-for="(url, index) in uploadedImageUrls" :key="index" class="image-preview-item">
+            <img :src="url" alt="预览图片" />
             <div class="image-remove" @click="removeImage(index)">×</div>
           </div>
         </div>
@@ -324,7 +456,6 @@ function cancelEditTitle() {
           @change="handleImageUpload"
         />
 
-        <!-- 输入框 -->
         <div class="input-row">
           <el-input
             v-model="inputMessage"
@@ -332,11 +463,20 @@ function cancelEditTitle() {
             placeholder="请输入您的问题..."
             :rows="3"
             :disabled="loading"
-            :maxlength="200"
+            :maxlength="500"
             show-word-limit
             class="message-input"
             @keydown="handleKeyDown"
           />
+          <el-button 
+            type="primary" 
+            class="send-btn" 
+            :disabled="loading || (!inputMessage.trim() && localImageFiles.length === 0)"
+            @click="sendMessage"
+          >
+            <el-icon v-if="!loading"><Promotion /></el-icon>
+            <span v-else class="loading-spinner"></span>
+          </el-button>
         </div>
       </div>
     </main>
@@ -347,22 +487,27 @@ function cancelEditTitle() {
 .chat-page {
   display: flex;
   min-height: 100vh;
-  background: linear-gradient(145deg, #0f172a 0%, #1e3a8a 50%, #1e40af 100%);
+  background: #f7f8fa;
 }
 
 /* 左侧边栏 */
 .sidebar {
   width: 280px;
-  background: linear-gradient(145deg, #0f172a 0%, #1e3a8a 50%, #1e40af 100%);
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
   display: flex;
   flex-direction: column;
   color: white;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
-  transition: margin-left 0.3s;
+  transition: transform 0.3s;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
 }
 
 .sidebar.closed {
-  margin-left: -280px;
+  transform: translateX(-100%);
 }
 
 .sidebar-header {
@@ -520,7 +665,8 @@ function cancelEditTitle() {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
+  background: #f7f8fa;
+  min-width: 0;
 }
 
 .chat-header {
@@ -529,13 +675,17 @@ function cancelEditTitle() {
   display: flex;
   align-items: center;
   border-bottom: 1px solid #e5e5e5;
+  background: white;
 }
 
-.header-left {
+.header-left, .header-right {
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+}
+
+.header-right {
+  justify-content: flex-end;
 }
 
 .header-center {
@@ -545,34 +695,6 @@ function cancelEditTitle() {
   align-items: center;
   justify-content: center;
   gap: 2px;
-}
-
-.header-right {
-  flex: 1;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.mobile-menu-btn {
-  display: none;
-  width: 32px;
-  height: 32px;
-  background: transparent !important;
-  border: none !important;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.mobile-menu-btn:hover {
-  background: rgba(0, 0, 0, 0.05) !important;
-}
-
-.mobile-menu-btn .el-icon {
-  font-size: 16px;
-  color: #666;
 }
 
 .edit-title-btn {
@@ -594,20 +716,6 @@ function cancelEditTitle() {
 .edit-title-btn .el-icon {
   font-size: 16px;
   color: #666;
-}
-
-.chat-header-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  position: relative;
-}
-
-.chat-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .chat-session-title {
@@ -638,25 +746,49 @@ function cancelEditTitle() {
   outline: none;
 }
 
+/* 消息列表 */
 .messages-container {
   flex: 1;
   padding: 24px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .empty-state {
+  flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 16px;
+  color: #666;
 }
 
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.empty-text {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.empty-hint {
+  font-size: 14px;
+  color: #999;
+}
+
+/* 消息样式 */
 .message {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   margin-bottom: 24px;
+  max-width: 800px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .message.user {
@@ -664,13 +796,13 @@ function cancelEditTitle() {
 }
 
 .message-avatar {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -681,12 +813,29 @@ function cancelEditTitle() {
 }
 
 .message.assistant .message-avatar {
-  background: rgba(255, 255, 255, 0.9);
-  color: #1a1a2e;
+  background: #e8e8e8;
+  color: #666;
+}
+
+.message-bubble {
+  max-width: 75%;
+  min-width: 100px;
+}
+
+.message-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.message-image {
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
 }
 
 .message-content {
-  max-width: 70%;
   padding: 12px 16px;
   border-radius: 12px;
   font-size: 14px;
@@ -696,28 +845,139 @@ function cancelEditTitle() {
 .message.user .message-content {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  border-bottom-right-radius: 4px;
 }
 
 .message.assistant .message-content {
-  background: rgba(255, 255, 255, 0.95);
-  color: #1a1a2e;
+  background: white;
+  color: #333;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* AI消息内容 */
+.ai-content {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.think-section {
+  background: #f8f9fa;
+  border-bottom: 1px solid #eee;
+}
+
+.think-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #666;
+}
+
+.think-header:hover {
+  background: #f0f0f0;
+}
+
+.think-content {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.output-section {
+  padding: 0;
+}
+
+.output-header {
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  background: #f8f9fa;
+  border-bottom: 1px solid #eee;
+}
+
+.output-form {
+  padding: 12px 14px;
+}
+
+.form-row {
+  display: flex;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.form-row:last-child {
+  border-bottom: none;
+}
+
+.form-label {
+  width: 90px;
+  font-size: 13px;
+  color: #999;
+  flex-shrink: 0;
+}
+
+.form-value {
+  flex: 1;
+  font-size: 13px;
+  color: #333;
+}
+
+.source-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #e8f4ff;
+  color: #1890ff;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 4px;
+  padding: 12px 16px;
+}
+
+.loading-dots span {
+  width: 6px;
+  height: 6px;
+  background: #ccc;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out;
+}
+
+.loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
 }
 
 /* 输入区域 */
 .input-container {
-  padding: 16px 24px;
+  padding: 16px 24px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  background: transparent;
 }
 
 .image-preview-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  width: 800px;
+  max-width: 800px;
+  width: 100%;
 }
 
 .image-preview-item {
@@ -756,27 +1016,47 @@ function cancelEditTitle() {
   display: flex;
   gap: 12px;
   align-items: flex-end;
-  width: 800px;
+  max-width: 800px;
+  width: 100%;
 }
 
 .message-input {
   flex: 1;
-  height: 120px;
 }
 
 .message-input :deep(.el-textarea__inner) {
   border-radius: 12px;
   resize: none;
-  background: rgba(255, 255, 255, 0.95);
-  color: #1a1a2e;
-  height: 120px;
+  font-size: 14px;
+}
+
+.send-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .upload-btn {
   width: 42px;
   height: 42px;
-  background: rgba(255, 255, 255, 0.9);
-  border: none;
+  background: white;
+  border: 1px solid #ddd;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -785,10 +1065,9 @@ function cancelEditTitle() {
 }
 
 .upload-btn:hover {
-  background: rgba(255, 255, 255, 1);
+  border-color: #667eea;
 }
 
-/* 移动端菜单按钮 */
 /* 移动端遮罩层 */
 .sidebar-overlay {
   display: none;
@@ -801,20 +1080,11 @@ function cancelEditTitle() {
 /* 移动端响应式 */
 @media (max-width: 768px) {
   .sidebar {
-    position: fixed;
-    left: -280px;
-    top: 0;
-    bottom: 0;
-    z-index: 100;
-    transition: left 0.3s;
+    transform: translateX(-100%);
   }
 
-  .sidebar.open {
-    left: 0;
-  }
-
-  .mobile-menu-btn {
-    display: flex;
+  .sidebar:not(.closed) {
+    transform: translateX(0);
   }
 
   .sidebar-overlay {
@@ -823,24 +1093,22 @@ function cancelEditTitle() {
 
   .chat-main {
     width: 100%;
-    background: #ffffff;
   }
 
   .chat-header {
     padding: 0 16px;
   }
 
-  .header-left {
-    flex: 1;
+  .messages-container {
+    padding: 16px;
   }
 
-  .header-center {
-    flex: 1;
-    padding: 0 12px;
+  .message {
+    max-width: 100%;
   }
 
-  .header-right {
-    flex: 1;
+  .message-bubble {
+    max-width: 85%;
   }
 
   .image-preview-row {
@@ -854,6 +1122,15 @@ function cancelEditTitle() {
 
   .message-input {
     width: 100%;
+  }
+
+  .input-container {
+    padding: 12px 16px 20px;
+  }
+
+  .message-image {
+    width: 80px;
+    height: 80px;
   }
 }
 </style>
