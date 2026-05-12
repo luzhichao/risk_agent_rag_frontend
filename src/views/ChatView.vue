@@ -36,11 +36,14 @@ const MAX_IMAGES = 5
 onMounted(async () => {
   sessionStore.loadSessionsFromCache()
   await sessionStore.loadSessionList()
-  
+
   // 如果有当前会话ID，恢复会话
   if (currentSessionId.value) {
     updateCurrentSessionTitle()
     await sessionStore.loadSessionHistory(currentSessionId.value)
+    // 加载完成后滚动到底部
+    await nextTick()
+    scrollToBottom()
   }
 })
 
@@ -64,6 +67,8 @@ async function createNewSession() {
 async function selectConversation(sessionId: string) {
   await sessionStore.selectSession(sessionId)
   updateCurrentSessionTitle()
+  await nextTick()
+  scrollToBottom()
 }
 
 async function handleImageUpload(event: Event) {
@@ -665,17 +670,22 @@ const riskLabels: Record<string, string> = {
   flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
   background: #f7f8fa;
   min-width: 0;
+  min-height: 0;
+  height: 100vh;
 }
 
 .chat-header {
+  flex-shrink: 0;
   height: 50px;
   padding: 0 24px;
   display: flex;
   align-items: center;
   border-bottom: 1px solid #e5e5e5;
   background: white;
+  width: 100%;
 }
 
 .header-left, .header-right {
@@ -753,6 +763,8 @@ const riskLabels: Record<string, string> = {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  width: 100%;
 }
 
 .empty-state {
@@ -970,6 +982,8 @@ const riskLabels: Record<string, string> = {
   flex-direction: column;
   align-items: center;
   gap: 12px;
+  width: 100%;
+  max-width: 800px;
 }
 
 .image-preview-row {
