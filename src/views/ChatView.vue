@@ -670,11 +670,12 @@ const riskLabels: Record<string, string> = {
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
   background: #f7f8fa;
   min-width: 0;
   min-height: 0;
   height: 100vh;
+  margin-left: 280px;
+  overflow: hidden;
 }
 
 .chat-header {
@@ -980,17 +981,14 @@ const riskLabels: Record<string, string> = {
   padding: 16px 24px 24px;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 12px;
   width: 100%;
-  max-width: 800px;
 }
 
 .image-preview-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  max-width: 800px;
   width: 100%;
 }
 
@@ -1030,7 +1028,6 @@ const riskLabels: Record<string, string> = {
   display: flex;
   gap: 12px;
   align-items: flex-end;
-  max-width: 800px;
   width: 100%;
 }
 
