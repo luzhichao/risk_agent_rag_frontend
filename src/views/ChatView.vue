@@ -674,7 +674,7 @@ const riskLabels: Record<string, string> = {
   min-width: 0;
   min-height: 0;
   height: 100vh;
-  margin-left: 280px;
+  padding-left: 280px;
   overflow: hidden;
 }
 
@@ -760,7 +760,7 @@ const riskLabels: Record<string, string> = {
 /* 消息列表 */
 .messages-container {
   flex: 1;
-  padding: 24px 24px 24px 44px;
+  padding: 24px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -798,14 +798,14 @@ const riskLabels: Record<string, string> = {
   display: flex;
   gap: 12px;
   margin-bottom: 24px;
-  max-width: 800px;
   width: 100%;
-  margin-left: auto;
-  margin-right: auto;
+  padding: 0 24px;
+  box-sizing: border-box;
 }
 
 .message.user {
   flex-direction: row-reverse;
+  justify-content: flex-start;
 }
 
 .message-avatar {
