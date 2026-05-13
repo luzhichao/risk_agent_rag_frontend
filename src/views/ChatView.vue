@@ -123,7 +123,7 @@ async function sendMessage() {
   // 确保有会话ID - 如果是新会话，截取问题前20字作为标题
   let sessionId = currentSessionId.value
   if (!sessionId) {
-    const sessionTitle = question.length > 20 ? question.substring(0, 20) + '...' : question
+    const sessionTitle = question.substring(0, 15) + '...'
     sessionId = await sessionStore.createSession(sessionTitle)
     if (sessionId) {
       updateCurrentSessionTitle()
@@ -205,6 +205,7 @@ function handleKeyDown(event: KeyboardEvent) {
 }
 
 function logout() {
+  sessionStore.reset()
   authStore.logout()
   router.push('/login')
 }

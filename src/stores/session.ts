@@ -224,6 +224,16 @@ export const useSessionStore = defineStore('session', () => {
     }
   }
 
+  // 重置所有状态（退出登录时调用）
+  function reset() {
+    sessions.value = []
+    currentSessionId.value = null
+    messages.value = []
+    loading.value = false
+    localStorage.removeItem(SESSIONS_KEY)
+    localStorage.removeItem(CURRENT_SESSION_KEY)
+  }
+
   return {
     sessions,
     currentSessionId,
@@ -242,5 +252,6 @@ export const useSessionStore = defineStore('session', () => {
     addUserMessage,
     addAssistantMessage,
     updateLastAssistantMessage,
+    reset,
   }
 })

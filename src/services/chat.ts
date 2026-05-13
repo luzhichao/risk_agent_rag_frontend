@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config/api'
 import { request } from './request'
 
 export interface ChatMessage {
@@ -82,7 +83,7 @@ export const chatService = {
   // 流式问答 - JSON对象流格式
   async *askStream(question: string, sessionId?: string, imageUrls?: string[]): AsyncGenerator<StreamMessage> {
     const token = localStorage.getItem('auth_token')
-    const response = await fetch('http://127.0.0.1:8000/api/v1/chat/ask', {
+    const response = await fetch(`${API_BASE_URL}/api/v1/chat/ask`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

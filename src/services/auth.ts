@@ -1,6 +1,5 @@
+import { API_BASE_URL } from '../config/api'
 import { request } from './request'
-
-const API_BASE_URL = 'http://127.0.0.1:8000'
 
 export interface LoginRequest {
   user_name: string

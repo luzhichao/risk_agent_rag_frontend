@@ -2,6 +2,10 @@
 
 基于 Vue 3 + TypeScript + Element Plus 的安全隐患识别智能问答系统前端。
 
+## 效果演示
+
+https://github.com/luzhichao/risk_agent_frontend/assets/1.mp4
+
 ## 功能设计
 
 ### 认证模块
@@ -68,3 +72,7 @@ npm run type-check # TypeScript检查
 - 注册: POST /api/v1/system/register
 - 登录: POST /api/v1/system/login
 - 问答: POST /api/v1/chat/ask
+
+## 登录参考
+https://github.com/katavii/animated-login
+https://github.com/opscolin/animated-login-vue

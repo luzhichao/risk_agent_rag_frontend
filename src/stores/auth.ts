@@ -43,6 +43,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   function logout() {
     clearAuth()
+    localStorage.removeItem('chat_sessions')
+    localStorage.removeItem('current_session_id')
+    localStorage.removeItem('sidebarOpen')
   }
 
   function getToken(): string | null {
