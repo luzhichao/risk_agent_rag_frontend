@@ -4,20 +4,29 @@
 
 ## 效果演示
 
+<div>
+
 ### 用户认证
-![user](screenshots/user.gif)
+
+<img src="screenshots/user.gif" width="800">
 
 ### 风险识别一
-![risk_1](screenshots/risk_1.gif)
+
+<img src="screenshots/risk_1.gif" width="800">
 
 ### 风险识别二
-![risk_2](screenshots/risk_2.gif)
+
+<img src="screenshots/risk_2.gif" width="800">
 
 ### 图片上传
-![risk_image](screenshots/risk_image.gif)
+
+<img src="screenshots/risk_image.gif" width="800">
 
 ### 历史记录
-![risk_history](screenshots/risk_history.gif)
+
+<img src="screenshots/risk_history.gif" width="800">
+
+</div>
 
 ## 功能设计
 
