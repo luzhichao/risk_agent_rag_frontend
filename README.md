@@ -4,7 +4,20 @@
 
 ## 效果演示
 
-https://github.com/luzhichao/risk_agent_frontend/assets/8FC72A38A.mp4
+### 用户认证
+![user](screenshots/user.gif)
+
+### 风险识别一
+![risk_1](screenshots/risk_1.gif)
+
+### 风险识别二
+![risk_2](screenshots/risk_2.gif)
+
+### 图片上传
+![risk_image](screenshots/risk_image.gif)
+
+### 历史记录
+![risk_history](screenshots/risk_history.gif)
 
 ## 功能设计
 
