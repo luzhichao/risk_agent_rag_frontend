@@ -4,7 +4,7 @@
 
 ## 效果演示
 
-https://github.com/luzhichao/risk_agent_frontend/assets/1.mp4
+https://github.com/luzhichao/risk_agent_frontend/assets/8FC72A38A.mp4
 
 ## 功能设计
 
