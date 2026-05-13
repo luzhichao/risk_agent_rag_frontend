@@ -96,5 +96,5 @@ npm run type-check # TypeScript检查
 - 问答: POST /api/v1/chat/ask
 
 ## 登录参考
-https://github.com/katavii/animated-login
-https://github.com/opscolin/animated-login-vue
+    https://github.com/katavii/animated-login
+    https://github.com/opscolin/animated-login-vue
